@@ -42,3 +42,15 @@ export const attachments = sqliteTable("attachments", {
 	content_id: text("content_id"),
 	disposition: text("disposition"),
 });
+
+export const events = sqliteTable("events", {
+	id: text("id").primaryKey(),
+	title: text("title").notNull(),
+	start_at: text("start_at").notNull(),
+	end_at: text("end_at").notNull(),
+	all_day: integer("all_day").default(0).notNull(),
+	description: text("description"),
+	location: text("location"),
+	source: text("source"),
+});
+

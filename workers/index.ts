@@ -20,8 +20,9 @@ import { handleReplyEmail, handleForwardEmail } from "./routes/reply-forward";
 import { Folders } from "../shared/folders";
 import type { Env } from "./types";
 import { requireMailbox, type MailboxContext } from "./lib/mailbox";
+import { requireCalendar, type CalendarContext } from "./lib/calendar";
 
-type AppContext = Context<MailboxContext>;
+type AppContext = Context<MailboxContext & CalendarContext>;
 
 // -- Request body schemas (kept for validation) ---------------------
 
@@ -65,7 +66,7 @@ function boolQuery(c: AppContext, key: string): boolean | undefined {
 
 // -- App & middleware -----------------------------------------------
 
-const app = new Hono<MailboxContext>();
+const app = new Hono<MailboxContext & CalendarContext>();
 app.use("/api/*", cors({
 	origin: (origin) => {
 		// Same-origin requests have no Origin header — allow them.
@@ -82,6 +83,7 @@ app.use("/api/*", cors({
 	},
 }));
 app.use("/api/v1/mailboxes/:mailboxId/*", requireMailbox);
+app.use("/api/v1/mailboxes/:mailboxId/calendar/*", requireCalendar);
 
 // -- Config ---------------------------------------------------------
 
@@ -292,6 +294,57 @@ app.put("/api/v1/mailboxes/:mailboxId/folders/:id", async (c: AppContext) => {
 app.delete("/api/v1/mailboxes/:mailboxId/folders/:id", async (c: AppContext) => {
 	const ok = await c.var.mailboxStub.deleteFolder(c.req.param("id")!);
 	return ok ? c.body(null, 204) : c.json({ error: "Folder not found or cannot be deleted" }, 400);
+});
+
+// -- Calendar -------------------------------------------------------
+
+app.get("/api/v1/mailboxes/:mailboxId/calendar/events", async (c: AppContext) => {
+	const start = c.req.query("start");
+	const end = c.req.query("end");
+	const events = await c.var.calendarStub.getEvents(start, end);
+	return c.json(events);
+});
+
+app.post("/api/v1/mailboxes/:mailboxId/calendar/events", async (c: AppContext) => {
+	const body = await c.req.json();
+	const event = {
+		id: crypto.randomUUID(),
+		title: body.title,
+		start_at: body.start_at,
+		end_at: body.end_at,
+		all_day: body.all_day ? 1 : 0,
+		description: body.description,
+		location: body.location,
+		source: body.source || "manual",
+	};
+	if (!event.title || !event.start_at || !event.end_at) {
+		return c.json({ error: "title, start_at, and end_at are required" }, 400);
+	}
+	const created = await c.var.calendarStub.createEvent(event);
+	return c.json(created, 201);
+});
+
+app.patch("/api/v1/mailboxes/:mailboxId/calendar/events/:eventId", async (c: AppContext) => {
+	const eventId = c.req.param("eventId")!;
+	const body = await c.req.json();
+	const updates: Record<string, any> = {};
+	if (body.title !== undefined) updates.title = body.title;
+	if (body.start_at !== undefined) updates.start_at = body.start_at;
+	if (body.end_at !== undefined) updates.end_at = body.end_at;
+	if (body.all_day !== undefined) updates.all_day = body.all_day ? 1 : 0;
+	if (body.description !== undefined) updates.description = body.description;
+	if (body.location !== undefined) updates.location = body.location;
+	if (body.source !== undefined) updates.source = body.source;
+
+	const updated = await c.var.calendarStub.updateEvent(eventId, updates);
+	if (!updated) return c.json({ error: "Event not found" }, 404);
+	return c.json(updated);
+});
+
+app.delete("/api/v1/mailboxes/:mailboxId/calendar/events/:eventId", async (c: AppContext) => {
+	const eventId = c.req.param("eventId")!;
+	const ok = await c.var.calendarStub.deleteEvent(eventId);
+	return ok ? c.body(null, 204) : c.json({ error: "Event not found" }, 404);
 });
 
 // -- Search ---------------------------------------------------------

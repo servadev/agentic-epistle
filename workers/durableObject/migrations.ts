@@ -169,3 +169,22 @@ export const mailboxMigrations: Migration[] = [
         `,
 	},
 ];
+
+export const calendarMigrations: Migration[] = [
+	{
+		name: "1_initial_calendar_setup",
+		sql: txn(`
+			CREATE TABLE events (
+				id TEXT PRIMARY KEY,
+				title TEXT NOT NULL,
+				start_at TEXT NOT NULL,
+				end_at TEXT NOT NULL,
+				all_day INTEGER NOT NULL DEFAULT 0,
+				description TEXT,
+				location TEXT,
+				source TEXT
+			);
+		`),
+	},
+];
+

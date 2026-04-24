@@ -9,7 +9,7 @@ import type { SQL } from "drizzle-orm";
 import * as schema from "../db/schema";
 import { Folders } from "../../shared/folders";
 import type { Env } from "../types";
-import { applyMigrations, mailboxMigrations } from "./migrations";
+import { applyMigrations, mailboxMigrations, calendarMigrations } from "./migrations";
 
 /**
  * SQL expression to normalize email subjects by stripping common
@@ -870,3 +870,71 @@ export class MailboxDO extends DurableObject<Env> {
 		}
 	}
 }
+
+export interface EventData {
+	id: string;
+	title: string;
+	start_at: string;
+	end_at: string;
+	all_day?: number;
+	description?: string | null;
+	location?: string | null;
+	source?: string | null;
+}
+
+export class CalendarDO extends DurableObject<Env> {
+	declare __DURABLE_OBJECT_BRAND: never;
+	db: ReturnType<typeof drizzle>;
+
+	constructor(state: DurableObjectState, env: Env) {
+		super(state, env);
+		this.db = drizzle(this.ctx.storage, { schema });
+		applyMigrations(this.ctx.storage.sql, calendarMigrations, this.ctx.storage);
+	}
+
+	async getEvents(start?: string, end?: string): Promise<EventData[]> {
+		let query = this.db.select().from(schema.events);
+		
+		if (start && end) {
+			query = query.where(
+				and(
+					sql`${schema.events.start_at} <= ${end}`,
+					sql`${schema.events.end_at} >= ${start}`
+				)
+			) as any;
+		} else if (start) {
+			query = query.where(sql`${schema.events.end_at} >= ${start}`) as any;
+		} else if (end) {
+			query = query.where(sql`${schema.events.start_at} <= ${end}`) as any;
+		}
+
+		return query.all();
+	}
+
+	async getEvent(id: string): Promise<EventData | undefined> {
+		return this.db.select().from(schema.events).where(eq(schema.events.id, id)).get();
+	}
+
+	async createEvent(event: EventData): Promise<EventData> {
+		const newEvent = {
+			...event,
+			all_day: event.all_day ?? 0,
+			description: event.description ?? null,
+			location: event.location ?? null,
+			source: event.source ?? null,
+		};
+		this.db.insert(schema.events).values(newEvent).run();
+		return newEvent;
+	}
+
+	async updateEvent(id: string, updates: Partial<EventData>): Promise<EventData | undefined> {
+		this.db.update(schema.events).set(updates).where(eq(schema.events.id, id)).run();
+		return this.getEvent(id);
+	}
+
+	async deleteEvent(id: string): Promise<boolean> {
+		const result = this.db.delete(schema.events).where(eq(schema.events.id, id)).run();
+		return result.meta.changes > 0;
+	}
+}
+
