@@ -12,7 +12,7 @@ import {
 	Text,
 	useKumoToastManager,
 } from "@cloudflare/kumo";
-import { EnvelopeIcon, PlusIcon, TrashIcon } from "@phosphor-icons/react";
+import { EnvelopeIcon, PlusIcon, TrashIcon, UserIcon } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { Link as RouterLink } from "react-router";
@@ -23,7 +23,11 @@ import {
 	useDeleteMailbox,
 	useMailboxes,
 } from "~/queries/mailboxes";
+import { useFolders } from "~/queries/folders";
+import { useEmails, useUpdateEmail, useMarkThreadRead } from "~/queries/emails";
+import { Folders } from "shared/folders";
 import { queryKeys } from "~/queries/keys";
+import type { Email } from "~/types";
 
 export function meta() {
 	return [{ title: "Epistle" }];
@@ -147,9 +151,97 @@ export default function HomeRoute() {
 
 	const defaultAccount = accounts.find((a) => a.id === lastMailbox) || (accounts.length > 0 ? accounts[0] : null);
 
+	const [isManageOpen, setIsManageOpen] = useState(false);
+	const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
+	const avatarMenuRef = useRef<HTMLDivElement>(null);
+
+	useEffect(() => {
+		if (!isAvatarMenuOpen) return;
+		const handler = (e: MouseEvent) => {
+			if (avatarMenuRef.current && !avatarMenuRef.current.contains(e.target as Node)) {
+				setIsAvatarMenuOpen(false);
+			}
+		};
+		document.addEventListener("mousedown", handler);
+		return () => document.removeEventListener("mousedown", handler);
+	}, [isAvatarMenuOpen]);
+
+	const { data: folders = [] } = useFolders(defaultAccount?.id);
+	const inboxFolder = folders.find(f => f.id === Folders.INBOX);
+	const unreadCount = inboxFolder?.unreadCount || 0;
+
+	const { data: priorityEmailsData } = useEmails(defaultAccount?.id, { folder: Folders.INBOX, limit: "3" });
+	const priorityEmails = priorityEmailsData?.emails || [];
+
+	const updateEmail = useUpdateEmail();
+	const markThreadRead = useMarkThreadRead();
+
+	const handleEmailClick = (email: Email) => {
+		if (defaultAccount?.id && !email.read) {
+			if (email.thread_id && email.thread_count && email.thread_count > 1) {
+				markThreadRead.mutate({
+					mailboxId: defaultAccount.id,
+					threadId: email.thread_id,
+				});
+			} else {
+				updateEmail.mutate({
+					mailboxId: defaultAccount.id,
+					id: email.id,
+					data: { read: true },
+				});
+			}
+		}
+	};
+
 	return (
 		<div className="min-h-screen bg-kumo-recessed flex items-center justify-center">
-			<div className="mx-auto max-w-2xl px-4 py-8 md:px-6 md:py-16 text-center w-full">
+			{/* Top Navigation */}
+			<div className="fixed top-0 left-0 right-0 h-16 bg-kumo-base/70 backdrop-blur border-b border-kumo-line flex items-center justify-between px-6 z-40">
+				<div className="font-semibold text-lg text-kumo-default">Epistle</div>
+				<div className="relative" ref={avatarMenuRef}>
+					<button
+						type="button"
+						className="flex items-center justify-center h-10 w-10 rounded-full bg-kumo-fill hover:bg-kumo-overlay transition-colors border-0 cursor-pointer"
+						onClick={() => setIsAvatarMenuOpen((o) => !o)}
+					>
+						{defaultAccount ? (
+							<span className="text-sm font-bold text-kumo-default">
+								{defaultAccount.name.charAt(0).toUpperCase()}
+							</span>
+						) : (
+							<UserIcon size={20} className="text-kumo-strong" />
+						)}
+					</button>
+					
+					{isAvatarMenuOpen && (
+						<div className="absolute top-full right-0 mt-2 w-72 rounded-xl border border-kumo-line bg-kumo-elevated shadow-xl py-5 z-50 flex flex-col items-center">
+							<div className="text-base font-medium text-kumo-default truncate w-full text-center px-4 mb-1">
+								{defaultAccount?.email || "No Mailbox"}
+							</div>
+							<div className="flex h-16 w-16 items-center justify-center rounded-full bg-kumo-fill text-2xl font-bold text-kumo-default my-3">
+								{defaultAccount ? defaultAccount.name.charAt(0).toUpperCase() : <UserIcon size={32} />}
+							</div>
+							<div className="text-sm text-kumo-subtle truncate w-full text-center px-4 mb-4">
+								Hi, {defaultAccount?.name || "User"}!
+							</div>
+							<div className="w-full px-4">
+								<Button
+									variant="secondary"
+									className="w-full rounded-full"
+									onClick={() => {
+										setIsAvatarMenuOpen(false);
+										setIsManageOpen(true);
+									}}
+								>
+									Manage your Mailboxes
+								</Button>
+							</div>
+						</div>
+					)}
+				</div>
+			</div>
+
+			<div className="mx-auto max-w-2xl px-4 py-8 md:px-6 md:py-16 text-center w-full mt-16">
 				{isLoading ? (
 					<div className="flex justify-center py-20">
 						<Loader size="lg" />
@@ -184,67 +276,131 @@ export default function HomeRoute() {
 							</Button>
 						)}
 
-						{accounts.length > 0 && (
-							<div className="mt-12 w-full max-w-md text-left">
-								<div className="flex items-center justify-between mb-4">
-									<h3 className="text-sm font-semibold text-kumo-default uppercase tracking-wider">Your Mailboxes</h3>
-									{!isConfigured && (
-										<Button
-											variant="ghost"
-											size="sm"
-											icon={<PlusIcon size={14} />}
-											onClick={() => setIsCreateOpen(true)}
-										>
-											New
-										</Button>
-									)}
+						{accounts.length > 0 && defaultAccount && (
+							<div className="mt-12 w-full max-w-lg text-left">
+								<div className="text-center mb-4">
+									<h3 className="text-sm font-medium text-kumo-subtle">
+										{unreadCount} unread email{unreadCount !== 1 ? "s" : ""}
+									</h3>
+									<p className="text-xs text-kumo-subtle mt-1">Priority emails</p>
 								</div>
-								<div className="rounded-xl border border-kumo-line bg-kumo-base overflow-hidden">
-									{accounts.map((account, idx) => (
-										<RouterLink
-											key={account.id}
-											to={`/mailbox/${account.id}`}
-											className={`group flex items-center gap-4 px-4 py-3 no-underline transition-colors hover:bg-kumo-tint ${
-												idx > 0 ? "border-t border-kumo-line" : ""
-											}`}
-										>
-											<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-kumo-fill text-xs font-bold text-kumo-default">
-												{account.name.charAt(0).toUpperCase()}
-											</div>
-											<div className="min-w-0 flex-1">
-												<div className="text-sm font-medium text-kumo-default truncate">
-													{account.name}
+								{priorityEmails.length > 0 ? (
+									<div className="rounded-xl border border-kumo-line bg-kumo-base overflow-hidden shadow-sm">
+										{priorityEmails.map((email, idx) => (
+											<RouterLink
+												key={email.id}
+												to={`/mailbox/${defaultAccount.id}/emails/inbox?selected=${email.id}`}
+												onClick={() => handleEmailClick(email)}
+												className={`group flex items-center gap-4 px-4 py-3 no-underline transition-colors hover:bg-kumo-tint ${
+													idx > 0 ? "border-t border-kumo-line" : ""
+												}`}
+											>
+												<div className="min-w-0 flex-1">
+													<div className="flex items-center gap-2 mb-0.5">
+														{!email.read && <div className="h-2 w-2 rounded-full bg-kumo-brand shrink-0" />}
+														<div className="text-sm font-medium text-kumo-default truncate">
+															{email.sender.split("@")[0]}
+														</div>
+														<div className="text-xs text-kumo-subtle shrink-0 ml-auto">
+															{new Date(email.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+														</div>
+													</div>
+													<div className={`text-sm truncate ${!email.read ? "font-medium text-kumo-default" : "text-kumo-subtle"}`}>
+														{email.subject || "(No subject)"}
+													</div>
 												</div>
-												<div className="text-xs text-kumo-subtle truncate">
-													{account.email}
-												</div>
-											</div>
-											{!isConfigured && (
-												<Button
-													variant="ghost"
-													size="sm"
-													shape="square"
-													icon={<TrashIcon size={14} />}
-													aria-label={`Delete mailbox ${account.email}`}
-													onClick={(e) => {
-														e.preventDefault();
-														e.stopPropagation();
-														setMailboxToDelete({
-															id: account.id,
-															email: account.email,
-														});
-														setIsDeleteOpen(true);
-													}}
-												/>
-											)}
-										</RouterLink>
-									))}
-								</div>
+											</RouterLink>
+										))}
+									</div>
+								) : (
+									<div className="rounded-xl border border-kumo-line bg-kumo-base py-8 px-4 text-center">
+										<p className="text-sm text-kumo-subtle">No recent emails</p>
+									</div>
+								)}
 							</div>
 						)}
 					</div>
 				)}
 			</div>
+
+			{/* Manage Mailboxes Dialog */}
+			<Dialog.Root open={isManageOpen} onOpenChange={setIsManageOpen}>
+				<Dialog size="sm" className="p-6">
+					<Dialog.Title className="text-base font-semibold mb-4">
+						Manage Mailboxes
+					</Dialog.Title>
+					<div className="space-y-4">
+						<div className="flex items-center justify-between">
+							<span className="text-sm text-kumo-subtle">
+								{accounts.length} mailbox{accounts.length !== 1 ? "es" : ""}
+							</span>
+							{!isConfigured && (
+								<Button
+									variant="ghost"
+									size="sm"
+									icon={<PlusIcon size={14} />}
+									onClick={() => {
+										setIsManageOpen(false);
+										setIsCreateOpen(true);
+									}}
+								>
+									New
+								</Button>
+							)}
+						</div>
+						<div className="rounded-xl border border-kumo-line bg-kumo-base overflow-hidden max-h-64 overflow-y-auto">
+							{accounts.map((account, idx) => (
+								<RouterLink
+									key={account.id}
+									to={`/mailbox/${account.id}`}
+									className={`group flex items-center gap-4 px-4 py-3 no-underline transition-colors hover:bg-kumo-tint ${
+										idx > 0 ? "border-t border-kumo-line" : ""
+									}`}
+								>
+									<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-kumo-fill text-xs font-bold text-kumo-default">
+										{account.name.charAt(0).toUpperCase()}
+									</div>
+									<div className="min-w-0 flex-1">
+										<div className="text-sm font-medium text-kumo-default truncate">
+											{account.name}
+										</div>
+										<div className="text-xs text-kumo-subtle truncate">
+											{account.email}
+										</div>
+									</div>
+									{!isConfigured && (
+										<Button
+											variant="ghost"
+											size="sm"
+											shape="square"
+											icon={<TrashIcon size={14} />}
+											aria-label={`Delete mailbox ${account.email}`}
+											onClick={(e) => {
+												e.preventDefault();
+												e.stopPropagation();
+												setMailboxToDelete({
+													id: account.id,
+													email: account.email,
+												});
+												setIsDeleteOpen(true);
+											}}
+										/>
+									)}
+								</RouterLink>
+							))}
+						</div>
+					</div>
+					<div className="mt-6 flex justify-end">
+						<Dialog.Close
+							render={(props) => (
+								<Button {...props} variant="secondary" size="sm">
+									Done
+								</Button>
+							)}
+						/>
+					</div>
+				</Dialog>
+			</Dialog.Root>
 
 			{/* Create Dialog */}
 			<Dialog.Root open={isCreateOpen} onOpenChange={setIsCreateOpen}>

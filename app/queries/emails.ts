@@ -94,7 +94,7 @@ export function useThreadReplies(
 // ---------- Mutations ----------
 
 /** Invalidate both the email list and folder counts after any email mutation. */
-function useInvalidateEmailData() {
+export function useInvalidateEmailData() {
 	const qc = useQueryClient();
 	return (mailboxId: string) => {
 		qc.invalidateQueries({ queryKey: ["emails", mailboxId] });
