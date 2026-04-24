@@ -15,7 +15,7 @@ import {
 import { EnvelopeIcon, PlusIcon, TrashIcon, UserIcon, MagnifyingGlassIcon, PencilSimpleIcon } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import { type FormEvent, useEffect, useRef, useState } from "react";
-import { Link as RouterLink } from "react-router";
+import { Link as RouterLink, useNavigate } from "react-router";
 import api from "~/services/api";
 import { safeGetStorage } from "~/lib/utils";
 import {
@@ -290,7 +290,8 @@ export default function HomeRoute() {
 
 	const updateEmail = useUpdateEmail();
 	const markThreadRead = useMarkThreadRead();
-	const { selectEmail } = useUIStore();
+	const { selectEmail, startCompose } = useUIStore();
+	const navigate = useNavigate();
 
 	const handleEmailClick = (email: Email) => {
 		selectEmail(email.id);
@@ -315,21 +316,27 @@ export default function HomeRoute() {
 			<Clock />
 			
 			{/* Bottom Right Floating Actions */}
-			<div className="fixed bottom-8 right-8 z-30 flex flex-col gap-4">
+			<div className="fixed bottom-8 right-8 z-30 flex flex-col gap-3">
 				<button 
 					type="button"
-					className="flex items-center justify-center h-14 w-14 rounded-full bg-transparent hover:bg-kumo-tint transition-colors border border-kumo-line text-kumo-default shadow-sm cursor-pointer"
+					className="flex items-center justify-center h-12 w-12 rounded-full bg-transparent hover:bg-kumo-tint transition-colors border border-kumo-line text-kumo-default shadow-sm cursor-pointer"
 					aria-label="Search"
 				>
-					<MagnifyingGlassIcon size={24} weight="light" />
+					<MagnifyingGlassIcon size={20} weight="light" />
 				</button>
-				<button 
-					type="button"
-					className="flex items-center justify-center h-14 w-14 rounded-full bg-transparent hover:bg-kumo-tint transition-colors border border-kumo-line text-kumo-default shadow-sm cursor-pointer"
-					aria-label="Compose"
-				>
-					<PencilSimpleIcon size={24} weight="light" />
-				</button>
+				{defaultAccount && (
+					<button 
+						type="button"
+						onClick={() => {
+							startCompose();
+							navigate(`/mailbox/${defaultAccount.id}/emails/inbox`);
+						}}
+						className="flex items-center justify-center h-12 w-12 rounded-full bg-transparent hover:bg-kumo-tint transition-colors border border-kumo-line text-kumo-default shadow-sm cursor-pointer"
+						aria-label="Compose"
+					>
+						<PencilSimpleIcon size={20} weight="light" />
+					</button>
+				)}
 			</div>
 
 			{/* Top Navigation */}
