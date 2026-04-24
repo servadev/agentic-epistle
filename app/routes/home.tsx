@@ -27,11 +27,19 @@ import { useFolders } from "~/queries/folders";
 import { useEmails, useUpdateEmail, useMarkThreadRead } from "~/queries/emails";
 import { Folders } from "shared/folders";
 import { queryKeys } from "~/queries/keys";
+import { useUIStore } from "~/hooks/useUIStore";
 import type { Email } from "~/types";
 
 export function meta() {
 	return [{ title: "Epistle" }];
 }
+
+interface SessionData {
+	lastActive: number;
+	prevSession: number;
+}
+
+const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
 
 export default function HomeRoute() {
 	const toastManager = useKumoToastManager();
@@ -166,19 +174,103 @@ export default function HomeRoute() {
 		return () => document.removeEventListener("mousedown", handler);
 	}, [isAvatarMenuOpen]);
 
-	const { data: folders = [] } = useFolders(defaultAccount?.id);
+	const { data: folders = [] } = useFolders(defaultAccount?.id, { refetchInterval: 15_000 });
 	const inboxFolder = folders.find(f => f.id === Folders.INBOX);
 	const unreadCount = inboxFolder?.unreadCount || 0;
 
-	const { data: recentEmailsData } = useEmails(defaultAccount?.id, { folder: Folders.INBOX, limit: "6" });
+	// Use a robust session tracking approach based on activity timeouts
+	// Storing as a single JSON object prevents race conditions where one key updates but the other hasn't
+	const [lastSessionTime, setLastSessionTime] = useState<number>(() => {
+		if (typeof window === "undefined") return Date.now();
+		
+		const now = Date.now();
+		const defaultSession: SessionData = {
+			lastActive: now,
+			prevSession: now - 86400000 // 24h ago default
+		};
+		
+		try {
+			const sessionDataRaw = localStorage.getItem('epistle_session');
+			let sessionData: SessionData | null = sessionDataRaw ? JSON.parse(sessionDataRaw) : null;
+			
+			// If missing or invalid, initialize defaults
+			if (!sessionData || typeof sessionData.lastActive !== 'number') {
+				sessionData = defaultSession;
+			} else {
+				// If there's been no activity for the timeout period, consider this a new session
+				if (now - sessionData.lastActive > SESSION_TIMEOUT) {
+					sessionData.prevSession = sessionData.lastActive;
+				}
+				sessionData.lastActive = now;
+			}
+			
+			localStorage.setItem('epistle_session', JSON.stringify(sessionData));
+			return sessionData.prevSession;
+		} catch (e) {
+			console.warn("Failed to parse or update session data", e);
+			return defaultSession.prevSession;
+		}
+	});
+
+	// Continuously update the last active time to prevent premature session rollovers
+	useEffect(() => {
+		const updateActiveTime = () => {
+			try {
+				const sessionDataRaw = localStorage.getItem('epistle_session');
+				if (sessionDataRaw) {
+					const sessionData = JSON.parse(sessionDataRaw) as SessionData;
+					sessionData.lastActive = Date.now();
+					localStorage.setItem('epistle_session', JSON.stringify(sessionData));
+				}
+			} catch (e) {
+				// Ignore parsing errors on background heartbeat
+			}
+		};
+		
+		const handleStorage = (e: StorageEvent) => {
+			if (e.key === 'epistle_session' && e.newValue) {
+				try {
+					const data = JSON.parse(e.newValue) as SessionData;
+					if (data.prevSession && typeof data.prevSession === 'number') {
+						setLastSessionTime(data.prevSession);
+					}
+				} catch (err) {}
+			}
+		};
+		
+		const interval = setInterval(updateActiveTime, 60000); // Heartbeat every minute
+		window.addEventListener('visibilitychange', updateActiveTime);
+		window.addEventListener('beforeunload', updateActiveTime);
+		window.addEventListener('storage', handleStorage);
+		
+		return () => {
+			clearInterval(interval);
+			window.removeEventListener('visibilitychange', updateActiveTime);
+			window.removeEventListener('beforeunload', updateActiveTime);
+			window.removeEventListener('storage', handleStorage);
+		};
+	}, []);
+
+	const { data: recentEmailsData } = useEmails(defaultAccount?.id, { folder: Folders.INBOX, limit: "25" }, { refetchInterval: 15_000 });
 	const recentEmails = recentEmailsData?.emails || [];
-	const priorityEmails = recentEmails.slice(0, 3);
-	const whatsNewEmails = recentEmails.slice(3, 6);
+	
+	// Priority emails: Up to 3 unread emails, fallback to latest read if none
+	const unreadRecent = recentEmails.filter(e => !e.read);
+	const priorityEmails = (unreadRecent.length > 0 ? unreadRecent : recentEmails).slice(0, 3);
+	
+	// What's new: Emails received since last session, excluding the ones already shown in priority
+	const priorityIds = new Set(priorityEmails.map(e => e.id));
+	const whatsNewEmails = recentEmails.filter(e => 
+		!priorityIds.has(e.id) && 
+		new Date(e.date).getTime() > lastSessionTime
+	).slice(0, 3);
 
 	const updateEmail = useUpdateEmail();
 	const markThreadRead = useMarkThreadRead();
+	const { selectEmail } = useUIStore();
 
 	const handleEmailClick = (email: Email) => {
+		selectEmail(email.id);
 		if (defaultAccount?.id && !email.read) {
 			if (email.thread_id && email.thread_count && email.thread_count > 1) {
 				markThreadRead.mutate({

@@ -7,13 +7,17 @@ import api from "~/services/api";
 import type { Folder } from "~/types";
 import { queryKeys } from "./keys";
 
-export function useFolders(mailboxId: string | undefined) {
+export function useFolders(
+	mailboxId: string | undefined,
+	options?: { enabled?: boolean; refetchInterval?: number }
+) {
 	return useQuery<Folder[]>({
 		queryKey: mailboxId
 			? queryKeys.folders.list(mailboxId)
 			: ["folders", "_disabled"],
 		queryFn: () => api.listFolders(mailboxId!) as Promise<Folder[]>,
-		enabled: !!mailboxId,
+		enabled: !!mailboxId && (options?.enabled ?? true),
+		refetchInterval: options?.refetchInterval,
 	});
 }
 

@@ -18,7 +18,7 @@ import {
 } from "@phosphor-icons/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useParams } from "react-router";
+import { useParams, useSearchParams } from "react-router";
 import { Folders } from "shared/folders";
 import { formatListDate } from "shared/dates";
 import MailboxSplitView from "~/components/MailboxSplitView";
@@ -145,6 +145,7 @@ export default function EmailListRoute() {
 		mailboxId: string;
 		folder: string;
 	}>();
+	const [searchParams, setSearchParams] = useSearchParams();
 	const {
 		selectedEmailId,
 		isComposing,
@@ -198,6 +199,19 @@ export default function EmailListRoute() {
 			setPage(1);
 		}
 	}, [mailboxId, folder, closePanel]);
+
+	// Handle ?selected= query param
+	useEffect(() => {
+		const selectedId = searchParams.get("selected");
+		if (selectedId && selectedId !== selectedEmailId) {
+			selectEmail(selectedId);
+			// Clean up the URL immediately after selection to avoid sticky state
+			setSearchParams((prev) => {
+				prev.delete("selected");
+				return prev;
+			}, { replace: true });
+		}
+	}, [searchParams, selectedEmailId, selectEmail, setSearchParams]);
 
 	const toggleStar = (e: React.MouseEvent, email: Email) => {
 		e.preventDefault();
