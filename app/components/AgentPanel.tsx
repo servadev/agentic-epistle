@@ -17,6 +17,9 @@ import {
 	CheckCircleIcon,
 	StopIcon,
 	PencilSimpleIcon,
+	CalendarBlankIcon,
+	CalendarPlusIcon,
+	CalendarXIcon,
 } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router";
@@ -61,6 +64,18 @@ const TOOL_LABELS: Record<string, { label: string; icon: React.ReactNode }> = {
 	move_email: {
 		label: "Moving email",
 		icon: <EnvelopeSimpleIcon size={14} weight="bold" />,
+	},
+	list_events: {
+		label: "Fetching events",
+		icon: <CalendarBlankIcon size={14} weight="bold" />,
+	},
+	create_event: {
+		label: "Creating event",
+		icon: <CalendarPlusIcon size={14} weight="bold" />,
+	},
+	delete_event: {
+		label: "Deleting event",
+		icon: <CalendarXIcon size={14} weight="bold" />,
 	},
 };
 

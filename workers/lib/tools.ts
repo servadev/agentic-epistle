@@ -529,3 +529,72 @@ export async function toolSendEmail(
 
 	return { status: "sent", messageId, message: `Email sent to ${params.to}` };
 }
+
+// ── Calendar Tools ──────────────────────────────────────────────────
+
+export async function toolListEvents(
+	env: Env,
+	mailboxId: string,
+	params: {
+		date_from?: string;
+		date_to?: string;
+	},
+): Promise<unknown> {
+	const ns = env.CALENDAR;
+	const id = ns.idFromName(mailboxId);
+	const stub = ns.get(id);
+
+	return stub.getEvents(params.date_from, params.date_to);
+}
+
+export async function toolCreateEvent(
+	env: Env,
+	mailboxId: string,
+	params: {
+		title: string;
+		start_at: string;
+		end_at: string;
+		description?: string;
+		location?: string;
+		all_day?: boolean;
+	},
+): Promise<unknown> {
+	if (new Date(params.start_at) >= new Date(params.end_at)) {
+		throw new Error('Start time must be before end time');
+	}
+
+	const ns = env.CALENDAR;
+	const id = ns.idFromName(mailboxId);
+	const stub = ns.get(id);
+
+	const eventId = crypto.randomUUID();
+	const newEvent = await stub.createEvent({
+		id: eventId,
+		title: params.title,
+		start_at: params.start_at,
+		end_at: params.end_at,
+		description: params.description || null,
+		location: params.location || null,
+		all_day: params.all_day ? 1 : 0,
+		source: "agent",
+	});
+
+	return newEvent;
+}
+
+export async function toolDeleteEvent(
+	env: Env,
+	mailboxId: string,
+	eventId: string,
+): Promise<unknown> {
+	const ns = env.CALENDAR;
+	const id = ns.idFromName(mailboxId);
+	const stub = ns.get(id);
+
+	const success = await stub.deleteEvent(eventId);
+	if (success) {
+		return { status: "deleted", message: `Event ${eventId} deleted successfully` };
+	} else {
+		return { error: `Event ${eventId} not found` };
+	}
+}

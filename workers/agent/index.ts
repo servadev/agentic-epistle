@@ -28,6 +28,9 @@ import {
 	toolMarkEmailRead,
 	toolMoveEmail,
 	toolDiscardDraft,
+	toolListEvents,
+	toolCreateEvent,
+	toolDeleteEvent,
 } from "../lib/tools";
 import { Folders, FOLDER_TOOL_DESCRIPTION, MOVE_FOLDER_TOOL_DESCRIPTION } from "../../shared/folders";
 import type { Env } from "../types";
@@ -264,6 +267,45 @@ function createEmailTools(env: Env, mailboxId: string) {
 			}),
 			execute: async ({ draftId }): Promise<unknown> => {
 				return toolDiscardDraft(env, mailboxId, draftId);
+			},
+		}),
+
+		list_events: defineTool({
+			description:
+				"List the user's upcoming calendar events",
+			parameters: z.object({
+				date_from: z.string().optional().describe("ISO string for start of date range"),
+				date_to: z.string().optional().describe("ISO string for end of date range"),
+			}),
+			execute: async ({ date_from, date_to }): Promise<unknown> => {
+				return toolListEvents(env, mailboxId, { date_from, date_to });
+			},
+		}),
+
+		create_event: defineTool({
+			description:
+				"Create a new calendar event",
+			parameters: z.object({
+				title: z.string().describe("Title of the event"),
+				start_at: z.string().describe("ISO string for the start time"),
+				end_at: z.string().describe("ISO string for the end time"),
+				description: z.string().optional().describe("Optional description of the event"),
+				location: z.string().optional().describe("Optional location of the event"),
+				all_day: z.boolean().optional().describe("Optional boolean indicating if the event is all-day"),
+			}),
+			execute: async ({ title, start_at, end_at, description, location, all_day }): Promise<unknown> => {
+				return toolCreateEvent(env, mailboxId, { title, start_at, end_at, description, location, all_day });
+			},
+		}),
+
+		delete_event: defineTool({
+			description:
+				"Delete a calendar event by ID",
+			parameters: z.object({
+				event_id: z.string().describe("The ID of the event to delete"),
+			}),
+			execute: async ({ event_id }): Promise<unknown> => {
+				return toolDeleteEvent(env, mailboxId, event_id);
 			},
 		}),
 	};
