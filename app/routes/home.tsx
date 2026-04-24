@@ -12,7 +12,7 @@ import {
 	Text,
 	useKumoToastManager,
 } from "@cloudflare/kumo";
-import { EnvelopeIcon, PlusIcon, TrashIcon, UserIcon } from "@phosphor-icons/react";
+import { EnvelopeIcon, PlusIcon, TrashIcon, UserIcon, MagnifyingGlassIcon, PencilSimpleIcon } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { Link as RouterLink } from "react-router";
@@ -40,6 +40,36 @@ interface SessionData {
 }
 
 const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+
+function Clock() {
+	const [time, setTime] = useState(new Date());
+
+	useEffect(() => {
+		const timer = setInterval(() => setTime(new Date()), 1000);
+		return () => clearInterval(timer);
+	}, []);
+
+	const dayName = time.toLocaleDateString('en-US', { weekday: 'long' });
+	const dayNum = time.getDate();
+	const month = time.toLocaleDateString('en-US', { month: 'short' });
+	
+	const timeString = time.toLocaleTimeString('en-US', {
+		hour: 'numeric',
+		minute: '2-digit',
+		hour12: true
+	}).toLowerCase().replace(/\s/g, '');
+
+	return (
+		<div className="fixed top-20 right-8 z-30 text-right select-none pointer-events-none hidden md:block">
+			<div className="text-kumo-default font-medium text-base mb-1 tracking-wide opacity-90">
+				{dayName}, {dayNum} {month}
+			</div>
+			<div className="text-kumo-default font-light text-5xl tracking-tight opacity-95">
+				{timeString}
+			</div>
+		</div>
+	);
+}
 
 export default function HomeRoute() {
 	const toastManager = useKumoToastManager();
@@ -257,13 +287,6 @@ export default function HomeRoute() {
 	// Priority emails: Up to 3 unread emails, fallback to latest read if none
 	const unreadRecent = recentEmails.filter(e => !e.read);
 	const priorityEmails = (unreadRecent.length > 0 ? unreadRecent : recentEmails).slice(0, 3);
-	
-	// What's new: Emails received since last session, excluding the ones already shown in priority
-	const priorityIds = new Set(priorityEmails.map(e => e.id));
-	const whatsNewEmails = recentEmails.filter(e => 
-		!priorityIds.has(e.id) && 
-		new Date(e.date).getTime() > lastSessionTime
-	).slice(0, 3);
 
 	const updateEmail = useUpdateEmail();
 	const markThreadRead = useMarkThreadRead();
@@ -289,6 +312,26 @@ export default function HomeRoute() {
 
 	return (
 		<div className="min-h-screen bg-kumo-recessed flex items-center justify-center">
+			<Clock />
+			
+			{/* Bottom Right Floating Actions */}
+			<div className="fixed bottom-8 right-8 z-30 flex flex-col gap-4">
+				<button 
+					type="button"
+					className="flex items-center justify-center h-14 w-14 rounded-full bg-transparent hover:bg-kumo-tint transition-colors border border-kumo-line text-kumo-default shadow-sm cursor-pointer"
+					aria-label="Search"
+				>
+					<MagnifyingGlassIcon size={24} weight="light" />
+				</button>
+				<button 
+					type="button"
+					className="flex items-center justify-center h-14 w-14 rounded-full bg-transparent hover:bg-kumo-tint transition-colors border border-kumo-line text-kumo-default shadow-sm cursor-pointer"
+					aria-label="Compose"
+				>
+					<PencilSimpleIcon size={24} weight="light" />
+				</button>
+			</div>
+
 			{/* Top Navigation */}
 			<div className="fixed top-0 left-0 right-0 h-16 bg-kumo-base/70 backdrop-blur border-b border-kumo-line flex items-center justify-between px-6 z-40">
 				<div className="font-semibold text-lg text-kumo-default">Epistle</div>
@@ -410,43 +453,6 @@ export default function HomeRoute() {
 											<p className="text-sm text-kumo-subtle">No recent emails</p>
 										</div>
 									)}
-								</div>
-
-								{/* What's New Section */}
-								<div className="mt-8">
-									<div className="flex items-center justify-between mb-3 px-1">
-										<h3 className="text-sm font-semibold text-kumo-default">What's new</h3>
-										<span className="text-xs text-kumo-subtle">Since last session</span>
-									</div>
-									<div className="flex flex-col gap-3">
-										{whatsNewEmails.length > 0 ? (
-											whatsNewEmails.map((email) => (
-												<RouterLink
-													key={email.id}
-													to={`/mailbox/${defaultAccount.id}/emails/inbox?selected=${email.id}`}
-													onClick={() => handleEmailClick(email)}
-													className="group flex items-center gap-4 px-4 py-3.5 no-underline transition-colors hover:bg-kumo-tint rounded-xl border border-kumo-line bg-kumo-base/60 backdrop-blur shadow-sm"
-												>
-													<div className="flex-1 flex items-center min-w-0 gap-3">
-														{!email.read && <div className="h-2 w-2 rounded-full bg-kumo-brand shrink-0" />}
-														<div className="text-sm font-semibold text-kumo-default shrink-0">
-															{email.sender.split("@")[0]}
-														</div>
-														<div className={`text-sm truncate ${!email.read ? "font-medium text-kumo-default" : "text-kumo-subtle"}`}>
-															{email.subject || "(No subject)"}
-														</div>
-													</div>
-													<div className="text-xs text-kumo-subtle shrink-0 ml-4">
-														{new Date(email.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-													</div>
-												</RouterLink>
-											))
-										) : (
-											<div className="rounded-xl border border-kumo-line bg-kumo-base/60 backdrop-blur py-8 px-4 text-center">
-												<p className="text-sm text-kumo-subtle">No new updates</p>
-											</div>
-										)}
-									</div>
 								</div>
 							</div>
 						)}
