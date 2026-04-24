@@ -170,8 +170,10 @@ export default function HomeRoute() {
 	const inboxFolder = folders.find(f => f.id === Folders.INBOX);
 	const unreadCount = inboxFolder?.unreadCount || 0;
 
-	const { data: priorityEmailsData } = useEmails(defaultAccount?.id, { folder: Folders.INBOX, limit: "3" });
-	const priorityEmails = priorityEmailsData?.emails || [];
+	const { data: recentEmailsData } = useEmails(defaultAccount?.id, { folder: Folders.INBOX, limit: "6" });
+	const recentEmails = recentEmailsData?.emails || [];
+	const priorityEmails = recentEmails.slice(0, 3);
+	const whatsNewEmails = recentEmails.slice(3, 6);
 
 	const updateEmail = useUpdateEmail();
 	const markThreadRead = useMarkThreadRead();
@@ -278,45 +280,82 @@ export default function HomeRoute() {
 
 						{accounts.length > 0 && defaultAccount && (
 							<div className="mt-12 w-full max-w-lg text-left">
-								<div className="text-center mb-4">
-									<h3 className="text-sm font-medium text-kumo-subtle">
-										{unreadCount} unread email{unreadCount !== 1 ? "s" : ""}
-									</h3>
-									<p className="text-xs text-kumo-subtle mt-1">Priority emails</p>
+								<div className="text-center mb-6">
+									<div className="flex items-center justify-center gap-2 text-sm font-medium text-kumo-default flex-wrap">
+										<span>{unreadCount} unread email{unreadCount !== 1 ? "s" : ""}</span>
+										<span className="text-kumo-subtle">&bull;</span>
+										<span>2 new events</span>
+										<span className="text-kumo-subtle">&bull;</span>
+										<span>3 new notifications</span>
+									</div>
 								</div>
-								{priorityEmails.length > 0 ? (
-									<div className="rounded-xl border border-kumo-line bg-kumo-base overflow-hidden shadow-sm">
-										{priorityEmails.map((email, idx) => (
+								
+								<div className="flex flex-col gap-3">
+									{priorityEmails.length > 0 ? (
+										priorityEmails.map((email) => (
 											<RouterLink
 												key={email.id}
 												to={`/mailbox/${defaultAccount.id}/emails/inbox?selected=${email.id}`}
 												onClick={() => handleEmailClick(email)}
-												className={`group flex items-center gap-4 px-4 py-3 no-underline transition-colors hover:bg-kumo-tint ${
-													idx > 0 ? "border-t border-kumo-line" : ""
-												}`}
+												className="group flex items-center gap-4 px-4 py-3.5 no-underline transition-colors hover:bg-kumo-tint rounded-xl border border-kumo-line bg-kumo-base/60 backdrop-blur shadow-sm"
 											>
-												<div className="min-w-0 flex-1">
-													<div className="flex items-center gap-2 mb-0.5">
-														{!email.read && <div className="h-2 w-2 rounded-full bg-kumo-brand shrink-0" />}
-														<div className="text-sm font-medium text-kumo-default truncate">
-															{email.sender.split("@")[0]}
-														</div>
-														<div className="text-xs text-kumo-subtle shrink-0 ml-auto">
-															{new Date(email.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-														</div>
+												<div className="flex-1 flex items-center min-w-0 gap-3">
+													{!email.read && <div className="h-2 w-2 rounded-full bg-kumo-brand shrink-0" />}
+													<div className="text-sm font-semibold text-kumo-default shrink-0">
+														{email.sender.split("@")[0]}
 													</div>
 													<div className={`text-sm truncate ${!email.read ? "font-medium text-kumo-default" : "text-kumo-subtle"}`}>
 														{email.subject || "(No subject)"}
 													</div>
 												</div>
+												<div className="text-xs text-kumo-subtle shrink-0 ml-4">
+													{new Date(email.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+												</div>
 											</RouterLink>
-										))}
+										))
+									) : (
+										<div className="rounded-xl border border-kumo-line bg-kumo-base/60 backdrop-blur py-8 px-4 text-center">
+											<p className="text-sm text-kumo-subtle">No recent emails</p>
+										</div>
+									)}
+								</div>
+
+								{/* What's New Section */}
+								<div className="mt-8">
+									<div className="flex items-center justify-between mb-3 px-1">
+										<h3 className="text-sm font-semibold text-kumo-default">What's new</h3>
+										<span className="text-xs text-kumo-subtle">Since last session</span>
 									</div>
-								) : (
-									<div className="rounded-xl border border-kumo-line bg-kumo-base py-8 px-4 text-center">
-										<p className="text-sm text-kumo-subtle">No recent emails</p>
+									<div className="flex flex-col gap-3">
+										{whatsNewEmails.length > 0 ? (
+											whatsNewEmails.map((email) => (
+												<RouterLink
+													key={email.id}
+													to={`/mailbox/${defaultAccount.id}/emails/inbox?selected=${email.id}`}
+													onClick={() => handleEmailClick(email)}
+													className="group flex items-center gap-4 px-4 py-3.5 no-underline transition-colors hover:bg-kumo-tint rounded-xl border border-kumo-line bg-kumo-base/60 backdrop-blur shadow-sm"
+												>
+													<div className="flex-1 flex items-center min-w-0 gap-3">
+														{!email.read && <div className="h-2 w-2 rounded-full bg-kumo-brand shrink-0" />}
+														<div className="text-sm font-semibold text-kumo-default shrink-0">
+															{email.sender.split("@")[0]}
+														</div>
+														<div className={`text-sm truncate ${!email.read ? "font-medium text-kumo-default" : "text-kumo-subtle"}`}>
+															{email.subject || "(No subject)"}
+														</div>
+													</div>
+													<div className="text-xs text-kumo-subtle shrink-0 ml-4">
+														{new Date(email.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+													</div>
+												</RouterLink>
+											))
+										) : (
+											<div className="rounded-xl border border-kumo-line bg-kumo-base/60 backdrop-blur py-8 px-4 text-center">
+												<p className="text-sm text-kumo-subtle">No new updates</p>
+											</div>
+										)}
 									</div>
-								)}
+								</div>
 							</div>
 						)}
 					</div>
