@@ -2,7 +2,7 @@
 // Licensed under the Apache 2.0 license found in the LICENSE file or at:
 //     https://opensource.org/licenses/Apache-2.0
 
-import type { Email, Folder, Mailbox } from "~/types";
+import type { Email, Folder, Mailbox, CalendarEvent } from "~/types";
 
 const REQUEST_TIMEOUT_MS = 30_000;
 
@@ -160,6 +160,16 @@ const api = {
 	// Search
 	searchEmails: (mailboxId: string, params: Record<string, string>) =>
 		get<EmailListResponse | Email[]>(`/api/v1/mailboxes/${mailboxId}/search`, { params }),
+
+	// Calendar
+	listEvents: (mailboxId: string, params?: { start?: string; end?: string }) =>
+		get<CalendarEvent[]>(`/api/v1/mailboxes/${mailboxId}/calendar/events`, params ? { params: { start: params.start || "", end: params.end || "" } } : undefined),
+	createEvent: (mailboxId: string, event: unknown) =>
+		post<CalendarEvent>(`/api/v1/mailboxes/${mailboxId}/calendar/events`, event),
+	updateEvent: (mailboxId: string, id: string, event: unknown) =>
+		put<CalendarEvent>(`/api/v1/mailboxes/${mailboxId}/calendar/events/${id}`, event),
+	deleteEvent: (mailboxId: string, id: string) =>
+		del<void>(`/api/v1/mailboxes/${mailboxId}/calendar/events/${id}`),
 };
 
 export default api;

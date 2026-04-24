@@ -14,7 +14,7 @@ import type { Env } from "../types";
 export type MailboxContext = {
 	Bindings: Env;
 	Variables: {
-		mailboxStub: DurableObjectStub<MailboxDO>;
+		mailboxStub: any;
 	};
 };
 

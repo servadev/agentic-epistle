@@ -104,3 +104,63 @@ export function formatQuotedDate(dateStr: string | undefined): string {
 		hour12: true,
 	});
 }
+
+// ── Calendar Utilities ────────────────────────────────────────────────
+
+export function startOfWeek(d: Date): Date {
+	const date = new Date(d);
+	date.setDate(date.getDate() - date.getDay());
+	date.setHours(0, 0, 0, 0);
+	return date;
+}
+
+export function addDays(d: Date, days: number): Date {
+	const date = new Date(d.valueOf());
+	date.setDate(date.getDate() + days);
+	return date;
+}
+
+export function isSameDay(d1: Date, d2: Date): boolean {
+	return (
+		d1.getFullYear() === d2.getFullYear() &&
+		d1.getMonth() === d2.getMonth() &&
+		d1.getDate() === d2.getDate()
+	);
+}
+
+export function startOfDay(d: Date): Date {
+	const date = new Date(d);
+	date.setHours(0, 0, 0, 0);
+	return date;
+}
+
+export function endOfDay(d: Date): Date {
+	const date = new Date(d);
+	date.setHours(23, 59, 59, 999);
+	return date;
+}
+
+export function formatShortTime(d: Date): string {
+	return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+
+export function formatMonthYear(d: Date): string {
+	return d.toLocaleDateString([], { month: "long", year: "numeric" });
+}
+
+export function formatDayName(d: Date): string {
+	return d.toLocaleDateString([], { weekday: "short" });
+}
+
+export function formatDayNum(d: Date): string {
+	return d.getDate().toString();
+}
+
+export function formatDateTime(d: Date): string {
+	return d.toLocaleString([], {
+		month: "short",
+		day: "numeric",
+		hour: "numeric",
+		minute: "2-digit",
+	});
+}

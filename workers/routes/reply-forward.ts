@@ -27,7 +27,7 @@ export async function handleReplyEmail(c: AppContext) {
 	const body = SendEmailRequestSchema.parse(await c.req.json());
 	const { to, cc, bcc, from, subject, html, text, attachments } = body;
 
-	const stub = c.var.mailboxStub;
+	const stub = c.var.mailboxStub as any;
 	const rawOriginal = (await stub.getEmail(id)) as EmailFull | null;
 
 	if (!rawOriginal) {
@@ -118,7 +118,7 @@ export async function handleForwardEmail(c: AppContext) {
 	const body = SendEmailRequestSchema.parse(await c.req.json());
 	const { to, cc, bcc, from, subject, html, text, attachments } = body;
 
-	const stub = c.var.mailboxStub;
+	const stub = c.var.mailboxStub as any;
 	const rawOriginal = (await stub.getEmail(id)) as EmailFull | null;
 
 	if (!rawOriginal) {

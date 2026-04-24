@@ -64,3 +64,14 @@ export interface Folder {
 	name: string;
 	unreadCount: number;
 }
+
+export interface CalendarEvent {
+	id: string;
+	title: string;
+	start_at: string;
+	end_at: string;
+	all_day?: number;
+	description?: string | null;
+	location?: string | null;
+	source?: string | null;
+}

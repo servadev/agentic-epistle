@@ -137,7 +137,7 @@ export function buildThreadingHeaders(
  * Used by reply/forward routes to avoid threading against the draft itself.
  */
 export async function resolveOriginalEmail(
-	stub: DurableObjectStub<MailboxDO>,
+	stub: any,
 	email: EmailFull,
 ): Promise<EmailFull> {
 	if (email.folder_id === Folders.DRAFT && email.in_reply_to) {
@@ -230,7 +230,7 @@ type MailboxThreadReaderStub = {
  * Returns null if the email is not found.
  */
 export async function getFullEmail(
-	stub: DurableObjectStub<MailboxDO>,
+	stub: any,
 	emailId: string,
 ) {
 	const email = (await stub.getEmail(emailId)) as EmailFull | null;
@@ -246,7 +246,7 @@ export async function getFullEmail(
  * instead of the previous N+1 pattern (1 list query + N getEmail calls).
  */
 export async function getFullThread(
-	stub: DurableObjectStub<MailboxDO>,
+	stub: any,
 	threadId: string,
 ) {
 	const threadStub = stub as unknown as MailboxThreadReaderStub;
