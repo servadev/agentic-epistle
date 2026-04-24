@@ -2,6 +2,18 @@
 @import "@cloudflare/kumo/styles/tailwind";
 @import "tailwindcss";
 
+@theme {
+  --color-kumo-brand: #007aff;
+  --color-kumo-brand-hover: #0062cc;
+  --color-kumo-brand-active: #004d99;
+}
+
+:root {
+  --color-kumo-brand: #007aff;
+  --color-kumo-brand-hover: #0062cc;
+  --color-kumo-brand-active: #004d99;
+}
+
 body {
   margin: 0;
 }

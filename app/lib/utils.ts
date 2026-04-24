@@ -200,6 +200,29 @@ export function getNonInlineAttachments(attachments?: Attachment[]): Attachment[
 	return attachments?.filter((attachment) => attachment.disposition !== "inline") ?? [];
 }
 
+/**
+ * Safely read from localStorage, handling quota exceeded and disabled storage errors.
+ */
+export function safeGetStorage(key: string): string | null {
+	try {
+		return localStorage.getItem(key);
+	} catch (e) {
+		console.warn(`Failed to read from localStorage:`, e);
+		return null;
+	}
+}
+
+/**
+ * Safely write to localStorage, handling quota exceeded and disabled storage errors.
+ */
+export function safeSetStorage(key: string, value: string): void {
+	try {
+		localStorage.setItem(key, value);
+	} catch (e) {
+		console.warn(`Failed to write to localStorage:`, e);
+	}
+}
+
 export function getAttachmentUrl(
 	mailboxId: string,
 	emailId: string,

@@ -10,6 +10,7 @@ import Header from "~/components/Header";
 import Sidebar from "~/components/Sidebar";
 import { useMailbox } from "~/queries/mailboxes";
 import { useUIStore } from "~/hooks/useUIStore";
+import { safeSetStorage } from "~/lib/utils";
 
 export default function MailboxRoute() {
 	const { mailboxId } = useParams<{ mailboxId: string }>();
@@ -25,6 +26,10 @@ export default function MailboxRoute() {
 	} = useUIStore();
 
 	useEffect(() => {
+		if (mailboxId) {
+			safeSetStorage("last_mailbox", mailboxId);
+		}
+		
 		if (
 			prevMailboxIdRef.current &&
 			mailboxId &&

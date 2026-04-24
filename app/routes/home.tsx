@@ -17,6 +17,7 @@ import { useQuery } from "@tanstack/react-query";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { Link as RouterLink } from "react-router";
 import api from "~/services/api";
+import { safeGetStorage } from "~/lib/utils";
 import {
 	useCreateMailbox,
 	useDeleteMailbox,
@@ -138,104 +139,109 @@ export default function HomeRoute() {
 		: mailboxes;
 
 	const isLoading = !configData;
+	const [lastMailbox, setLastMailbox] = useState<string | null>(null);
+
+	useEffect(() => {
+		setLastMailbox(safeGetStorage("last_mailbox"));
+	}, []); // safeGetStorage is a stable imported function
+
+	const defaultAccount = accounts.find((a) => a.id === lastMailbox) || (accounts.length > 0 ? accounts[0] : null);
 
 	return (
-		<div className="min-h-screen bg-kumo-recessed">
-			<div className="mx-auto max-w-2xl px-4 py-8 md:px-6 md:py-16">
-				<div className="mb-8">
-					<div className="flex items-center justify-between">
-						<h1 className="text-2xl font-bold text-kumo-default">Mailboxes</h1>
-						{!isConfigured && (
-							<Button
-								variant="primary"
-								icon={<PlusIcon size={16} />}
-								onClick={() => setIsCreateOpen(true)}
-							>
-								New Mailbox
-							</Button>
-						)}
-					</div>
-					{domains.length > 0 && (
-						<p className="text-sm text-kumo-subtle mt-1">
-							{domains.join(", ")}
-						</p>
-					)}
-				</div>
-
+		<div className="min-h-screen bg-kumo-recessed flex items-center justify-center">
+			<div className="mx-auto max-w-2xl px-4 py-8 md:px-6 md:py-16 text-center w-full">
 				{isLoading ? (
 					<div className="flex justify-center py-20">
 						<Loader size="lg" />
 					</div>
-				) : accounts.length > 0 ? (
-					<div className="rounded-xl border border-kumo-line bg-kumo-base overflow-hidden">
-						{accounts.map((account, idx) => (
-							<RouterLink
-								key={account.id}
-								to={`/mailbox/${account.id}`}
-								className={`group flex items-center gap-4 px-5 py-4 no-underline transition-colors hover:bg-kumo-tint ${
-									idx > 0 ? "border-t border-kumo-line" : ""
-								}`}
-							>
-								<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-kumo-fill text-sm font-bold text-kumo-default">
-									{account.name.charAt(0).toUpperCase()}
-								</div>
-								<div className="min-w-0 flex-1">
-									<div className="text-sm font-medium text-kumo-default truncate">
-										{account.name}
-									</div>
-									<div className="text-sm text-kumo-subtle">
-										{account.email}
-									</div>
-								</div>
-								{!isConfigured && (
-									<Button
-										variant="ghost"
-										size="sm"
-										shape="square"
-										icon={<TrashIcon size={16} />}
-										aria-label={`Delete mailbox ${account.email}`}
-										onClick={(e) => {
-											e.preventDefault();
-											e.stopPropagation();
-											setMailboxToDelete({
-												id: account.id,
-												email: account.email,
-											});
-											setIsDeleteOpen(true);
-										}}
-									/>
-								)}
-							</RouterLink>
-						))}
-					</div>
 				) : (
-					<div className="rounded-xl border border-kumo-line bg-kumo-base py-16 px-6">
-						<div className="flex flex-col items-center text-center">
-							<div className="mb-4">
-								<EnvelopeIcon
-									size={48}
-									weight="thin"
-									className="text-kumo-subtle"
-								/>
+					<div className="flex flex-col items-center">
+						<h1 className="text-4xl md:text-5xl font-bold text-kumo-default mb-4">
+							Good Morning!
+						</h1>
+						<h2 className="text-xl md:text-2xl text-kumo-subtle mb-10">
+							{accounts.length > 0 
+								? "Let's check your Inbox" 
+								: "Let's get started by creating an Inbox"}
+						</h2>
+						
+						{accounts.length > 0 ? (
+							defaultAccount && (
+								<RouterLink to={`/mailbox/${defaultAccount.id}/emails/inbox`} className="no-underline">
+									<Button variant="primary" size="lg" className="rounded-full px-8 py-4 text-lg shadow-lg">
+										Check Inbox
+									</Button>
+								</RouterLink>
+							)
+						) : (
+							<Button 
+								variant="primary" 
+								size="lg" 
+								className="rounded-full px-8 py-4 text-lg shadow-lg"
+								onClick={() => setIsCreateOpen(true)}
+							>
+								Create Mailbox
+							</Button>
+						)}
+
+						{accounts.length > 0 && (
+							<div className="mt-12 w-full max-w-md text-left">
+								<div className="flex items-center justify-between mb-4">
+									<h3 className="text-sm font-semibold text-kumo-default uppercase tracking-wider">Your Mailboxes</h3>
+									{!isConfigured && (
+										<Button
+											variant="ghost"
+											size="sm"
+											icon={<PlusIcon size={14} />}
+											onClick={() => setIsCreateOpen(true)}
+										>
+											New
+										</Button>
+									)}
+								</div>
+								<div className="rounded-xl border border-kumo-line bg-kumo-base overflow-hidden">
+									{accounts.map((account, idx) => (
+										<RouterLink
+											key={account.id}
+											to={`/mailbox/${account.id}`}
+											className={`group flex items-center gap-4 px-4 py-3 no-underline transition-colors hover:bg-kumo-tint ${
+												idx > 0 ? "border-t border-kumo-line" : ""
+											}`}
+										>
+											<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-kumo-fill text-xs font-bold text-kumo-default">
+												{account.name.charAt(0).toUpperCase()}
+											</div>
+											<div className="min-w-0 flex-1">
+												<div className="text-sm font-medium text-kumo-default truncate">
+													{account.name}
+												</div>
+												<div className="text-xs text-kumo-subtle truncate">
+													{account.email}
+												</div>
+											</div>
+											{!isConfigured && (
+												<Button
+													variant="ghost"
+													size="sm"
+													shape="square"
+													icon={<TrashIcon size={14} />}
+													aria-label={`Delete mailbox ${account.email}`}
+													onClick={(e) => {
+														e.preventDefault();
+														e.stopPropagation();
+														setMailboxToDelete({
+															id: account.id,
+															email: account.email,
+														});
+														setIsDeleteOpen(true);
+													}}
+												/>
+											)}
+										</RouterLink>
+									))}
+								</div>
 							</div>
-							<h3 className="text-base font-semibold text-kumo-default mb-1.5">
-								No mailboxes yet
-							</h3>
-							<p className="text-sm text-kumo-subtle max-w-sm mb-5">
-								{isConfigured
-									? "Your email routing is configured but no mailboxes have been created yet. They will appear here automatically."
-									: "Create a mailbox to start sending and receiving emails with your domain."}
-							</p>
-							{!isConfigured && (
-								<Button
-									variant="primary"
-									icon={<PlusIcon size={16} />}
-									onClick={() => setIsCreateOpen(true)}
-								>
-									Create Mailbox
-								</Button>
-							)}
-						</div>
+						)}
 					</div>
 				)}
 			</div>
