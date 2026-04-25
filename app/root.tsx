@@ -83,10 +83,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
 				<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 				<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 				<title>Epistle</title>
+				<link rel="preconnect" href="https://fonts.googleapis.com" />
+				<link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+				<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap" rel="stylesheet" />
 				<Meta />
 				<Links />
 			</head>
-			<body className="bg-kumo-recessed text-kumo-default antialiased">
+			<body className="font-sans bg-slate-50 text-slate-900 antialiased">
 				{children}
 				<ScrollRestoration />
 				<Scripts />

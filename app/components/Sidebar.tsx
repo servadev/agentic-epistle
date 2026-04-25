@@ -44,6 +44,7 @@ interface FolderLinkProps {
 	label: string;
 	unreadCount?: number;
 	onClick?: () => void;
+	isCollapsed?: boolean;
 }
 
 function FolderLink({
@@ -52,23 +53,28 @@ function FolderLink({
 	label,
 	unreadCount,
 	onClick,
+	isCollapsed,
 }: FolderLinkProps) {
 	return (
 		<NavLink
 			to={to}
 			onClick={onClick}
+			title={isCollapsed ? label : undefined}
 			className={({ isActive }) =>
-				`flex items-center gap-3 py-2 px-3 rounded-md text-sm transition-colors ${
+				`relative flex items-center ${isCollapsed ? "justify-center px-0 py-3 md:py-3 lg:py-2 lg:px-3 lg:justify-start lg:gap-3" : "gap-3 py-2 px-3"} rounded-lg text-sm font-medium transition-colors ${
 					isActive
-						? "bg-kumo-fill font-semibold text-kumo-default"
-						: "text-kumo-strong hover:bg-kumo-tint"
+						? "bg-slate-200 text-slate-900 shadow-sm"
+						: "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
 				}`
 			}
 		>
-			<span className="shrink-0">{icon}</span>
-			<span className="truncate flex-1">{label}</span>
+			<span className="shrink-0 flex items-center justify-center">{icon}</span>
+			<span className={`truncate flex-1 ${isCollapsed ? "hidden lg:block" : "block"}`}>{label}</span>
 			{unreadCount != null && unreadCount > 0 && (
-				<Badge variant="secondary">{unreadCount}</Badge>
+				<Badge variant="secondary" className={`bg-slate-200 text-slate-700 ${isCollapsed ? "hidden lg:inline-flex" : "inline-flex"}`}>{unreadCount}</Badge>
+			)}
+			{isCollapsed && unreadCount != null && unreadCount > 0 && (
+				<div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-indigo-600 lg:hidden" />
 			)}
 		</NavLink>
 	);
@@ -79,10 +85,12 @@ export default function Sidebar() {
 	const navigate = useNavigate();
 	const { data: folders = [] } = useFolders(mailboxId);
 	const createFolderMutation = useCreateFolder();
-	const { startCompose, closeSidebar } = useUIStore();
+	const { startCompose, closeSidebar, isSidebarOpen, openSidebar } = useUIStore();
 	const { data: currentMailbox } = useMailbox(mailboxId);
 	const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
 	const [newFolderName, setNewFolderName] = useState("");
+
+	const isCollapsed = !isSidebarOpen;
 
 	const customFolders = useMemo(
 		() =>
@@ -122,39 +130,48 @@ export default function Sidebar() {
 	};
 
 	return (
-		<aside className="h-full w-64 bg-kumo-recessed flex flex-col shrink-0 border-r border-kumo-line">
+		<aside 
+			className={`h-full bg-slate-50 flex flex-col shrink-0 border-r border-slate-200 transition-all duration-200 ${
+				isSidebarOpen ? "w-64" : "w-64 md:w-[72px] lg:w-64"
+			}`}
+		>
 			{/* Back + identity */}
-			<div className="px-4 pt-4 pb-1">
+			<div className={`pt-4 pb-1 ${isCollapsed ? "px-2 md:px-0 lg:px-4" : "px-4"}`}>
 				<button
 					type="button"
 					onClick={() => {
 						navigate("/");
 						closeSidebar();
 					}}
-					className="flex items-center gap-1.5 text-kumo-subtle text-sm hover:text-kumo-default transition-colors mb-2.5 cursor-pointer bg-transparent border-0 p-0"
+					className={`flex items-center text-slate-500 text-sm hover:text-slate-900 transition-colors mb-2.5 cursor-pointer bg-transparent border-0 p-0 ${
+						isCollapsed ? "justify-center md:justify-center lg:justify-start gap-0 lg:gap-1.5" : "gap-1.5"
+					}`}
 				>
 					<CaretLeftIcon size={14} />
-					<span>Mailboxes</span>
+					<span className={isCollapsed ? "hidden lg:inline" : ""}>Mailboxes</span>
 				</button>
-				<div className="px-1">
-					<div className="text-base font-semibold text-kumo-default truncate">
+				<div className={`px-1 ${isCollapsed ? "hidden lg:block" : ""}`}>
+					<div className="text-base font-semibold text-slate-900 truncate">
 						{displayName}
 					</div>
-					<div className="text-sm text-kumo-subtle truncate mt-0.5">
+					<div className="text-sm text-slate-500 truncate mt-0.5">
 						{currentMailbox?.email || mailboxId}
 					</div>
 				</div>
 			</div>
 
 			{/* Compose */}
-			<div className="px-3 py-3">
+			<div className={`py-3 ${isCollapsed ? "px-2 md:px-3 lg:px-3" : "px-3"}`}>
 				<Button
 					variant="primary"
 					icon={<PencilSimpleIcon size={16} />}
 					onClick={() => startCompose()}
-					className="w-full"
+					className={`bg-slate-700 hover:bg-slate-800 text-white shadow-md border-0 ${
+						isCollapsed ? "w-full md:w-12 md:h-12 md:p-0 md:justify-center md:rounded-full lg:w-full lg:h-auto lg:p-2 lg:justify-start lg:rounded-md" : "w-full"
+					}`}
+					title="Compose"
 				>
-					Compose
+					<span className={isCollapsed ? "inline md:hidden lg:inline" : ""}>Compose</span>
 				</Button>
 			</div>
 
@@ -168,6 +185,7 @@ export default function Sidebar() {
 						label={folder.label}
 						unreadCount={getUnreadCount(folder.id)}
 						onClick={handleNavClick}
+						isCollapsed={isCollapsed}
 					/>
 				))}
 
@@ -177,14 +195,15 @@ export default function Sidebar() {
 						icon={<UsersIcon size={18} weight="regular" />}
 						label="Contacts"
 						onClick={handleNavClick}
+						isCollapsed={isCollapsed}
 					/>
 				</div>
 
 				{/* Custom folders */}
 				{customFolders.length > 0 && (
 					<div className="pt-5">
-						<div className="flex items-center justify-between px-3 mb-1.5">
-							<span className="text-xs uppercase tracking-wider font-semibold text-kumo-subtle">
+						<div className={`flex items-center justify-between mb-1.5 ${isCollapsed ? "px-0 md:px-0 lg:px-3 justify-center lg:justify-between" : "px-3"}`}>
+							<span className={`text-xs uppercase tracking-wider font-bold text-slate-500 ${isCollapsed ? "hidden lg:block" : ""}`}>
 								Folders
 							</span>
 							<Tooltip content="New folder" asChild>
@@ -195,27 +214,31 @@ export default function Sidebar() {
 									icon={<PlusIcon size={16} />}
 									onClick={() => setIsCreateFolderOpen(true)}
 									aria-label="Create new folder"
+									className={isCollapsed ? "mx-auto lg:mx-0" : ""}
 								/>
 							</Tooltip>
 						</div>
-						{customFolders.map((folder) => (
-							<FolderLink
-								key={folder.id}
-								to={`/mailbox/${mailboxId}/emails/${folder.id}`}
-								icon={<FolderIcon size={18} />}
-								label={folder.name}
-								unreadCount={folder.unreadCount}
-								onClick={handleNavClick}
-							/>
-						))}
+						<div className="space-y-0.5">
+							{customFolders.map((folder) => (
+								<FolderLink
+									key={folder.id}
+									to={`/mailbox/${mailboxId}/emails/${folder.id}`}
+									icon={<FolderIcon size={18} weight="regular" />}
+									label={folder.name}
+									unreadCount={folder.unreadCount}
+									onClick={handleNavClick}
+									isCollapsed={isCollapsed}
+								/>
+							))}
+						</div>
 					</div>
 				)}
 
 				{/* Add folder button when no custom folders */}
 				{customFolders.length === 0 && (
 					<div className="pt-5">
-						<div className="flex items-center justify-between px-3 mb-1.5">
-							<span className="text-xs uppercase tracking-wider font-semibold text-kumo-subtle">
+						<div className={`flex items-center justify-between mb-1.5 ${isCollapsed ? "px-0 md:px-0 lg:px-3 justify-center lg:justify-between" : "px-3"}`}>
+							<span className={`text-xs uppercase tracking-wider font-bold text-slate-500 ${isCollapsed ? "hidden lg:block" : ""}`}>
 								Folders
 							</span>
 							<Tooltip content="New folder" asChild>
@@ -226,6 +249,7 @@ export default function Sidebar() {
 									icon={<PlusIcon size={16} />}
 									onClick={() => setIsCreateFolderOpen(true)}
 									aria-label="Create new folder"
+									className={isCollapsed ? "mx-auto lg:mx-0" : ""}
 								/>
 							</Tooltip>
 						</div>

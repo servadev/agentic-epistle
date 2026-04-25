@@ -288,13 +288,13 @@ export default function EmailListRoute() {
 			isComposing={isComposing}
 		>
 				{/* Folder header */}
-				<div className="flex items-center justify-between px-4 py-3.5 border-b border-kumo-line shrink-0 md:px-5">
-					<h1 className="text-lg font-semibold text-kumo-default">
+				<div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-200 shrink-0 md:px-5 bg-white">
+					<h1 className="text-lg font-bold text-slate-900 tracking-tight">
 						{folderName}
 					</h1>
 					<div className="flex items-center gap-1">
 						{totalCount > 0 && (
-							<span className="text-sm text-kumo-subtle mr-2 hidden sm:inline">
+							<span className="text-sm text-slate-500 mr-2 hidden sm:inline">
 								{totalCount} conversation{totalCount !== 1 ? "s" : ""}
 							</span>
 						)}
@@ -342,14 +342,14 @@ export default function EmailListRoute() {
 												handleRowClick(email);
 											}
 										}}
-										className={`group flex items-center gap-3 w-full text-left cursor-pointer transition-colors border-b border-kumo-line px-4 py-2.5 md:px-6 md:py-3 ${
+										className={`group flex items-center gap-3 w-full text-left cursor-pointer transition-colors border-b border-slate-200 px-4 py-2.5 md:px-6 md:py-3 ${
 											isPanelOpen ? "md:px-4 md:py-2.5" : ""
-										} ${isSelected ? "bg-kumo-tint" : "hover:bg-kumo-tint"}`}
+										} ${isSelected ? "bg-slate-200 shadow-sm border-l-4 border-l-slate-600" : "hover:bg-slate-50 border-l-4 border-l-transparent"}`}
 									>
 										{/* Unread dot */}
 										<div className="w-2.5 shrink-0 flex justify-center">
 											{hasUnread(email) && (
-												<div className="h-2 w-2 rounded-full bg-kumo-brand" />
+												<div className="h-2 w-2 rounded-full bg-slate-600" />
 											)}
 										</div>
 
@@ -367,8 +367,8 @@ export default function EmailListRoute() {
 												weight={email.starred ? "fill" : "regular"}
 												className={
 													email.starred
-														? "text-kumo-warning"
-														: "text-kumo-subtle hover:text-kumo-warning"
+														? "text-amber-500"
+														: "text-slate-400 hover:text-amber-500"
 												}
 											/>
 										</button>
@@ -377,39 +377,39 @@ export default function EmailListRoute() {
 										<div className="min-w-0 flex-1">
 											<div className="flex items-center gap-2">
 												<span
-													className={`truncate text-sm ${hasUnread(email) ? "font-semibold text-kumo-default" : "text-kumo-strong"}`}
+													className={`truncate text-sm ${hasUnread(email) ? "font-semibold text-slate-900" : "text-slate-700"}`}
 												>
 													{formatParticipants(email)}
 												</span>
 												{(email.thread_count ?? 1) > 1 && (
-													<span className="shrink-0 text-xs text-kumo-subtle bg-kumo-fill rounded-full px-1.5 py-0.5 font-medium">
+													<span className="shrink-0 text-xs text-slate-500 bg-slate-200 rounded-full px-1.5 py-0.5 font-medium">
 														{email.thread_count}
 													</span>
 												)}
 												{email.has_draft && (
-													<span className="shrink-0 text-xs text-kumo-destructive font-medium">
+													<span className="shrink-0 text-xs text-red-500 font-medium">
 														Draft
 													</span>
 												)}
 												{email.needs_reply && !email.has_draft && (
 													<Tooltip content="Needs reply" asChild>
-														<span className="shrink-0 text-kumo-warning">
+														<span className="shrink-0 text-amber-500">
 															<ArrowBendUpLeftIcon size={14} weight="bold" />
 														</span>
 													</Tooltip>
 												)}
-												<span className="text-sm text-kumo-subtle shrink-0 ml-auto">
+												<span className="text-sm text-slate-500 shrink-0 ml-auto">
 													{formatListDate(email.date)}
 												</span>
 											</div>
 											<div className="truncate text-sm mt-0.5">
 												<span
-													className={hasUnread(email) ? "font-medium text-kumo-default" : "text-kumo-subtle"}
+													className={hasUnread(email) ? "font-medium text-slate-900" : "text-slate-500"}
 												>
 													{email.subject}
 												</span>
 											{snippet && (
-												<span className="text-kumo-subtle font-normal">
+												<span className="text-slate-400 font-normal">
 													{" "}&mdash; {snippet}
 												</span>
 											)}

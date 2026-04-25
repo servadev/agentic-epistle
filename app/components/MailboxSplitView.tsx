@@ -20,32 +20,39 @@ export default function MailboxSplitView({
 	const isPanelOpen = selectedEmailId !== null || isComposing;
 
 	return (
-		<div className="flex h-full">
+		<div className="relative flex h-full overflow-hidden">
 			<div
-				className={`flex flex-col min-w-0 shrink-0 ${
+				className={`flex flex-col min-w-0 shrink-0 w-full md:w-[380px] md:border-r md:border-slate-200 transition-transform duration-300 ease-in-out ${
 					isPanelOpen
-						? "hidden md:flex md:w-[380px] md:border-r md:border-kumo-line"
-						: "w-full"
+						? "-translate-x-full md:translate-x-0"
+						: "translate-x-0"
 				}`}
 			>
 				{children}
 			</div>
-			{isPanelOpen && (
-				<div className="flex-1 flex flex-col min-w-0 overflow-hidden w-full md:w-auto">
-					{isComposing && !selectedEmailId ? (
-						<ComposePanel />
-					) : isComposing && selectedEmailId ? (
-						<div className="flex flex-col h-full overflow-y-auto">
+			
+			<div
+				className={`absolute inset-0 md:relative md:inset-auto md:flex-1 flex flex-col min-w-0 bg-white transition-transform duration-300 ease-in-out z-10 md:z-auto ${
+					isPanelOpen ? "translate-x-0" : "translate-x-full md:translate-x-0 md:hidden"
+				}`}
+			>
+				{isPanelOpen && (
+					<div className="flex-1 flex flex-col min-w-0 overflow-hidden w-full h-full">
+						{isComposing && !selectedEmailId ? (
 							<ComposePanel />
-							<div className="border-t border-kumo-line">
-								<EmailPanel emailId={selectedEmailId} />
+						) : isComposing && selectedEmailId ? (
+							<div className="flex flex-col h-full overflow-y-auto">
+								<ComposePanel />
+								<div className="border-t border-slate-200">
+									<EmailPanel emailId={selectedEmailId} />
+								</div>
 							</div>
-						</div>
-					) : selectedEmailId ? (
-						<EmailPanel emailId={selectedEmailId} />
-					) : null}
-				</div>
-			)}
+						) : selectedEmailId ? (
+							<EmailPanel emailId={selectedEmailId} />
+						) : null}
+					</div>
+				)}
+			</div>
 		</div>
 	);
 }
