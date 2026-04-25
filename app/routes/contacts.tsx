@@ -37,7 +37,7 @@ export default function ContactsRoute() {
 
 	// Fetch recent emails for selected contact
 	const { data: recentEmailsData } = useSearchEmails(mailboxId, 
-		selectedContact ? `from:${selectedContact.email} OR to:${selectedContact.email}` : "",
+		selectedContact ? selectedContact.email : "",
 		1
 	);
 
@@ -133,7 +133,14 @@ export default function ContactsRoute() {
 										setIsEditOpen(false);
 									}}
 								>
-									<div className="font-medium text-sm text-kumo-default truncate">{contact.name}</div>
+									<div className="flex items-center justify-between gap-2">
+										<div className="font-medium text-sm text-kumo-default truncate">{contact.name}</div>
+										{contact.email === mailboxId && (
+											<span className="shrink-0 rounded bg-kumo-brand/10 px-1.5 py-0.5 text-[10px] font-medium text-kumo-brand">
+												Me
+											</span>
+										)}
+									</div>
 									<div className="text-xs text-kumo-subtle truncate">{contact.email}</div>
 								</button>
 							))}
@@ -205,7 +212,14 @@ export default function ContactsRoute() {
 									<UserCircleIcon size={40} weight="light" />
 								</div>
 								<div>
-									<h2 className="text-2xl font-bold text-kumo-default">{selectedContact.name}</h2>
+									<div className="flex items-center gap-3">
+										<h2 className="text-2xl font-bold text-kumo-default">{selectedContact.name}</h2>
+										{selectedContact.email === mailboxId && (
+											<span className="rounded bg-kumo-brand/10 px-2 py-0.5 text-xs font-semibold text-kumo-brand">
+												Me
+											</span>
+										)}
+									</div>
 									<div className="text-kumo-subtle">{selectedContact.email}</div>
 								</div>
 							</div>
