@@ -293,6 +293,9 @@ export default function HomeRoute() {
 	const todayStart = startOfDay(new Date()).toISOString();
 	const todayEnd = endOfDay(new Date()).toISOString();
 	const { data: todayEvents = [] } = useEvents(defaultAccount?.id, { start: todayStart, end: todayEnd }, { enabled: !!defaultAccount?.id });
+	const sortedTodayEvents = [...todayEvents]
+		.sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime())
+		.slice(0, 3);
 
 	const updateEmail = useUpdateEmail();
 	const markThreadRead = useMarkThreadRead();
@@ -445,7 +448,7 @@ export default function HomeRoute() {
 												key={email.id}
 												to={`/mailbox/${defaultAccount.id}/emails/inbox?selected=${email.id}`}
 												onClick={() => handleEmailClick(email)}
-												className="group flex items-center gap-4 px-4 py-3.5 no-underline transition-colors hover:bg-kumo-tint rounded-xl border border-kumo-line bg-kumo-base/60 backdrop-blur shadow-sm"
+												className="group flex items-center gap-4 px-4 py-2.5 no-underline transition-colors hover:bg-kumo-tint rounded-xl border border-kumo-line bg-kumo-base/60 backdrop-blur shadow-sm"
 											>
 												<div className="flex-1 flex items-center min-w-0 gap-3">
 													{!email.read && <div className="h-2 w-2 rounded-full bg-kumo-brand shrink-0" />}
@@ -466,6 +469,26 @@ export default function HomeRoute() {
 											<p className="text-sm text-kumo-subtle">No recent emails</p>
 										</div>
 									)}
+
+									{sortedTodayEvents.map((event) => (
+										<RouterLink
+											key={`event-${event.id}`}
+											to={`/mailbox/${defaultAccount.id}/calendar`}
+											className="group flex items-center gap-4 px-4 py-2.5 no-underline transition-colors hover:bg-kumo-tint rounded-xl border border-kumo-line bg-kumo-base/60 backdrop-blur shadow-sm"
+										>
+											<div className="flex-1 flex items-center min-w-0 gap-3">
+												<div className="text-sm font-semibold text-kumo-default shrink-0">
+													Event
+												</div>
+												<div className="text-sm truncate text-kumo-subtle">
+													{event.title}
+												</div>
+											</div>
+											<div className="text-xs text-kumo-subtle shrink-0 ml-4">
+												{new Date(event.start_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+											</div>
+										</RouterLink>
+									))}
 								</div>
 							</div>
 						)}
