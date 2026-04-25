@@ -303,6 +303,22 @@ export default function EmailListRoute() {
 		return email.sender.split("@")[0];
 	};
 
+	const groupedEmails = useMemo(() => {
+		const groups: { header: string; emails: Email[] }[] = [];
+		let currentHeader = "";
+
+		emails.forEach((email) => {
+			const header = getGroupHeader(email.date);
+			if (header !== currentHeader) {
+				groups.push({ header, emails: [email] });
+				currentHeader = header;
+			} else {
+				groups[groups.length - 1].emails.push(email);
+			}
+		});
+		return groups;
+	}, [emails]);
+
 	return (
 		<MailboxSplitView
 			selectedEmailId={selectedEmailId}
@@ -348,21 +364,7 @@ export default function EmailListRoute() {
 					<EmailListSkeleton />
 				) : emails.length > 0 ? (
 						<div>
-							{useMemo(() => {
-								const groups: { header: string; emails: Email[] }[] = [];
-								let currentHeader = "";
-
-								emails.forEach((email) => {
-									const header = getGroupHeader(email.date);
-									if (header !== currentHeader) {
-										groups.push({ header, emails: [email] });
-										currentHeader = header;
-									} else {
-										groups[groups.length - 1].emails.push(email);
-									}
-								});
-								return groups;
-							}, [emails]).map((group) => (
+							{groupedEmails.map((group) => (
 								<div key={group.header}>
 									<div className="sticky top-0 z-10 bg-white/95 backdrop-blur px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">
 										{group.header}
