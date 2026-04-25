@@ -314,6 +314,12 @@ app.get("/api/v1/mailboxes/:mailboxId/calendar/events", async (c: AppContext) =>
 	return c.json(events);
 });
 
+app.get("/api/v1/mailboxes/:mailboxId/emails/:emailId/suggested-events", async (c: AppContext) => {
+	const emailId = c.req.param("emailId")!;
+	const events = await c.var.calendarStub.getSuggestedEvents(emailId);
+	return c.json(events);
+});
+
 app.post("/api/v1/mailboxes/:mailboxId/calendar/events", async (c: AppContext) => {
 	const body = await c.req.json();
 	const event = {

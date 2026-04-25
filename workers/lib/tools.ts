@@ -582,6 +582,41 @@ export async function toolCreateEvent(
 	return newEvent;
 }
 
+export async function toolSuggestEvent(
+	env: Env,
+	mailboxId: string,
+	params: {
+		email_id: string;
+		title: string;
+		start_at: string;
+		end_at: string;
+		description?: string;
+		location?: string;
+	},
+): Promise<unknown> {
+	if (new Date(params.start_at) >= new Date(params.end_at)) {
+		throw new Error('Start time must be before end time');
+	}
+
+	const ns = env.CALENDAR;
+	const id = ns.idFromName(mailboxId);
+	const stub = ns.get(id);
+
+	const eventId = crypto.randomUUID();
+	const newEvent = await stub.createEvent({
+		id: eventId,
+		title: params.title,
+		start_at: params.start_at,
+		end_at: params.end_at,
+		description: params.description || null,
+		location: params.location || null,
+		all_day: 0,
+		source: `suggested:${params.email_id}`,
+	});
+
+	return { status: "event_suggested", eventId: newEvent.id, message: "Suggested event successfully created. It will be shown to the user to confirm." };
+}
+
 export async function toolDeleteEvent(
 	env: Env,
 	mailboxId: string,

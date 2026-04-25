@@ -25,6 +25,17 @@ export function useEvents(
 	});
 }
 
+export function useSuggestedEvents(mailboxId: string | undefined, emailId: string | undefined) {
+	return useQuery({
+		queryKey: ["suggestedEvents", mailboxId, emailId],
+		queryFn: () => {
+			if (!mailboxId || !emailId) throw new Error("Missing params");
+			return api.getSuggestedEvents(mailboxId, emailId);
+		},
+		enabled: !!mailboxId && !!emailId,
+	});
+}
+
 export function useCreateEvent() {
 	const qc = useQueryClient();
 	return useMutation({
@@ -64,6 +75,7 @@ export function useDeleteEvent() {
 			api.deleteEvent(mailboxId, id),
 		onSuccess: (_data, { mailboxId }) => {
 			qc.invalidateQueries({ queryKey: queryKeys.calendar.all });
+			qc.invalidateQueries({ queryKey: ["suggestedEvents", mailboxId] });
 		},
 	});
 }

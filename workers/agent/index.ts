@@ -15,6 +15,8 @@ import type { EmailFull, EmailMetadata } from "../lib/schemas";
 import { verifyDraft, isPromptInjection } from "../lib/ai";
 import {
 	getMailboxStub,
+	getFullEmail,
+	getFullThread,
 	stripHtmlToText,
 	textToHtml,
 } from "../lib/email-helpers";
@@ -31,6 +33,7 @@ import {
 	toolListEvents,
 	toolCreateEvent,
 	toolDeleteEvent,
+	toolSuggestEvent,
 	toolSearchContacts,
 	toolGetContact,
 } from "../lib/tools";
@@ -91,7 +94,8 @@ You can ONLY draft emails. You do NOT have the ability to send emails directly.
 ## Calendar Capabilities
 You have full access to manage the user's calendar. You can list, create, and delete calendar events. 
 - Use list_events to check availability or see upcoming schedule
-- Use create_event to schedule meetings or block time
+- Use suggest_event to extract meeting details from emails and offer them to the user. ALWAYS use this instead of create_event when processing invites from emails, so the user can review them first.
+- Use create_event to schedule meetings or block time only when explicitly asked
 - Use delete_event to cancel or remove events
 
 ## Contact Capabilities
@@ -319,6 +323,22 @@ function createEmailTools(env: Env, mailboxId: string) {
 			},
 		}),
 
+		suggest_event: defineTool({
+			description:
+				"Suggest a calendar event based on an email invitation. ALWAYS use this instead of create_event when an email contains a meeting invite or proposes a time. It creates a temporary event that the user can confirm or dismiss in the UI.",
+			parameters: z.object({
+				email_id: z.string().describe("The ID of the email containing the invite"),
+				title: z.string().describe("Title of the event"),
+				start_at: z.string().describe("ISO string for the start time"),
+				end_at: z.string().describe("ISO string for the end time"),
+				description: z.string().optional().describe("Optional description of the event"),
+				location: z.string().optional().describe("Optional location of the event"),
+			}),
+			execute: async (params): Promise<unknown> => {
+				return toolSuggestEvent(env, mailboxId, params);
+			},
+		}),
+
 		search_contacts: defineTool({
 			description:
 				"Search the user's contacts. Leave the query empty to get all contacts. Use this to find a person's email address or organization details.",
@@ -419,9 +439,9 @@ export class EmailAgent extends AIChatAgent<any> {
 		let emailBody = "";
 		let threadContext = "";
 		try {
-			const email = (await stub.getEmail(emailData.emailId)) as EmailFull | null;
-			if (email?.body) {
-				const isInjection = await isPromptInjection(env.AI, email.body);
+			const email = await getFullEmail(stub, emailData.emailId);
+			if (email?.body_text) {
+				const isInjection = await isPromptInjection(env.AI, email.body_text);
 				if (isInjection) {
 					console.warn("Skipping auto-draft due to detected prompt injection:", emailData.emailId);
 					
@@ -447,23 +467,17 @@ export class EmailAgent extends AIChatAgent<any> {
 					return;
 				}
 				
-				emailBody = stripHtmlToText(email.body);
+				emailBody = email.body_text || "";
 			}
 
 		// Load thread for conversation context
-		const threadEmails = (await stub.getEmails({ thread_id: emailData.threadId })) as EmailMetadata[];
-		if (threadEmails.length > 1) {
-			const fullThread = await Promise.all(
-				threadEmails.map(async (e) => {
-					const full = (await stub.getEmail(e.id)) as EmailFull | null;
-					const text = full?.body ? stripHtmlToText(full.body) : "";
-					return { id: e.id, sender: e.sender, recipient: e.recipient, subject: e.subject, date: e.date, folder_id: e.folder_id, body_text: text };
-				}),
-			);
-			fullThread.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-			threadContext = fullThread
-				.map((e) => `[${e.date}] ${e.sender} → ${e.recipient} (${e.folder_id}): ${e.body_text.substring(0, 500)}`)
-				.join("\n\n");
+		if (emailData.threadId) {
+			const threadResult = await getFullThread(stub, emailData.threadId);
+			if (threadResult && Array.isArray(threadResult.messages) && threadResult.messages.length > 1) {
+				threadContext = threadResult.messages
+					.map((e) => `[${e.date}] ${e.sender} → ${e.recipient} (${e.folder_id}): ${(e.body_text || "").substring(0, 500)}`)
+					.join("\n\n");
+			}
 
 			// Scan thread context for prompt injection too -- an attacker
 			// could plant an injection in an earlier email in the thread
@@ -522,7 +536,16 @@ This is the first message in the thread (no prior conversation).`;
 
 		autoPrompt += `
 
-Based on the email content and thread context above, draft a reply using draft_reply. If you need more context, use get_thread with thread ID "${emailData.threadId}".`;
+Based on the email content and thread context above:
+1. Draft a reply using draft_reply. If you need more context, use get_thread with thread ID "${emailData.threadId}".`;
+
+		const containsMeetingKeywords = /invite|meeting|\b\d{1,2}:\d{2}\b|\b(?:mon|tues|wednes|thurs|fri|satur|sun)day\b|\btomorrow\b|\btoday\b/i.test(emailData.subject) || 
+			/invite|meeting|\b\d{1,2}:\d{2}\b|\b(?:mon|tues|wednes|thurs|fri|satur|sun)day\b|\btomorrow\b|\btoday\b/i.test(emailBody);
+
+		if (containsMeetingKeywords) {
+			autoPrompt += `
+2. IMPORTANT: The email seems to contain a meeting invitation or proposes a time to meet. YOU MUST ALSO call suggest_event to extract the meeting details. NEVER use create_event here, ONLY use suggest_event so the user can review it first.`;
+		}
 
 		// Fresh context for auto-draft -- don't include prior chat history
 		// to avoid confusing the model with old messages and tool calls

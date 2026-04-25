@@ -171,6 +171,8 @@ const api = {
 	// Calendar
 	listEvents: (mailboxId: string, params?: { start?: string; end?: string }) =>
 		get<CalendarEvent[]>(`/api/v1/mailboxes/${mailboxId}/calendar/events`, params ? { params: { start: params.start || "", end: params.end || "" } } : undefined),
+	getSuggestedEvents: (mailboxId: string, emailId: string) =>
+		get<CalendarEvent[]>(`/api/v1/mailboxes/${mailboxId}/emails/${emailId}/suggested-events`),
 	createEvent: (mailboxId: string, event: unknown) =>
 		post<CalendarEvent>(`/api/v1/mailboxes/${mailboxId}/calendar/events`, event),
 	updateEvent: (mailboxId: string, id: string, event: unknown) =>

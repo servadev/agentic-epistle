@@ -895,20 +895,20 @@ export class CalendarDO extends DurableObject<Env> {
 	async getEvents(start?: string, end?: string): Promise<EventData[]> {
 		let query = this.db.select().from(schema.events);
 		
-		if (start && end) {
-			query = query.where(
-				and(
-					sql`${schema.events.start_at} <= ${end}`,
-					sql`${schema.events.end_at} >= ${start}`
-				)
-			) as any;
-		} else if (start) {
-			query = query.where(sql`${schema.events.end_at} >= ${start}`) as any;
-		} else if (end) {
-			query = query.where(sql`${schema.events.start_at} <= ${end}`) as any;
+		const conditions: any[] = [];
+		if (start) conditions.push(sql`${schema.events.end_at} >= ${start}`);
+		if (end) conditions.push(sql`${schema.events.start_at} <= ${end}`);
+		conditions.push(sql`(${schema.events.source} IS NULL OR ${schema.events.source} NOT LIKE 'suggested:%')`);
+
+		if (conditions.length > 0) {
+			query = query.where(and(...conditions)) as any;
 		}
 
 		return query.all();
+	}
+
+	async getSuggestedEvents(emailId: string): Promise<EventData[]> {
+		return this.db.select().from(schema.events).where(eq(schema.events.source, `suggested:${emailId}`)).all();
 	}
 
 	async getEvent(id: string): Promise<EventData | undefined> {
