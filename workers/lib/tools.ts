@@ -151,7 +151,7 @@ export async function toolDraftReply(
 	const draftId = crypto.randomUUID();
 
 	// Get the original email for thread_id and quoted text
-	const original = (await stub.getEmail(params.originalEmailId)) as EmailFull | null;
+	const original: EmailFull | null = await getFullEmail(stub, params.originalEmailId);
 	const threadId = original?.thread_id || params.originalEmailId;
 
 	// Append quoted original message
@@ -233,7 +233,7 @@ export async function toolDraftEmail(
 	// Resolve thread ID
 	let resolvedThreadId = params.thread_id;
 	if (!resolvedThreadId && params.in_reply_to) {
-		const original = (await stub.getEmail(params.in_reply_to)) as EmailFull | null;
+		const original: EmailFull | null = await getFullEmail(stub, params.in_reply_to);
 		resolvedThreadId = original?.thread_id || params.in_reply_to;
 	}
 	if (!resolvedThreadId) {
@@ -286,7 +286,7 @@ export async function toolUpdateDraft(
 > {
 	const stub = getMailboxStub(env, mailboxId);
 
-	const oldDraft = (await stub.getEmail(params.draftId)) as EmailFull | null;
+	const oldDraft: EmailFull | null = await getFullEmail(stub, params.draftId);
 	if (!oldDraft) {
 		return { error: "Draft not found" };
 	}
@@ -334,7 +334,7 @@ export async function toolMarkEmailRead(
 	read: boolean,
 ) {
 	const stub = getMailboxStub(env, mailboxId);
-	await stub.updateEmail(emailId, { read });
+	await (stub as unknown as { updateEmail: (id: string, updates: any) => Promise<void> }).updateEmail(emailId, { read });
 	return { status: "updated", emailId, read };
 }
 
@@ -362,7 +362,7 @@ export async function toolDiscardDraft(
 	draftId: string,
 ) {
 	const stub = getMailboxStub(env, mailboxId);
-	const email = (await stub.getEmail(draftId)) as { folder_id?: string } | null;
+	const email = await getFullEmail(stub, draftId);
 	if (!email) {
 		return { error: "Draft not found" };
 	}
@@ -411,7 +411,7 @@ export async function toolSendReply(
 		return { error: rateLimitError };
 	}
 
-	const originalEmail = (await stub.getEmail(params.originalEmailId)) as EmailFull | null;
+	const originalEmail: EmailFull | null = await getFullEmail(stub, params.originalEmailId);
 	if (!originalEmail) {
 		return { error: "Original email not found" };
 	}

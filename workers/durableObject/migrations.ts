@@ -188,3 +188,22 @@ export const calendarMigrations: Migration[] = [
 	},
 ];
 
+export const contactMigrations: Migration[] = [
+	{
+		name: "1_initial_contacts_setup",
+		sql: txn(`
+			CREATE TABLE contacts (
+				id TEXT PRIMARY KEY,
+				name TEXT NOT NULL,
+				email TEXT NOT NULL,
+				phone TEXT,
+				org TEXT,
+				notes TEXT,
+				avatar_url TEXT,
+				created_at TEXT NOT NULL,
+				updated_at TEXT NOT NULL
+			);
+		`),
+	},
+];
+

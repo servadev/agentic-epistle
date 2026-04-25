@@ -10,7 +10,7 @@ import { app as apiApp, receiveEmail } from "./index";
 import { EmailMCP } from "./mcp";
 import type { Env } from "./types";
 
-export { MailboxDO, CalendarDO } from "./durableObject";
+export { MailboxDO, CalendarDO, ContactsDO } from "./durableObject";
 export { EmailAgent } from "./agent";
 export { EmailMCP } from "./mcp";
 

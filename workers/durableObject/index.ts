@@ -9,7 +9,7 @@ import type { SQL } from "drizzle-orm";
 import * as schema from "../db/schema";
 import { Folders } from "../../shared/folders";
 import type { Env } from "../types";
-import { applyMigrations, mailboxMigrations, calendarMigrations } from "./migrations";
+import { applyMigrations, mailboxMigrations, calendarMigrations, contactMigrations } from "./migrations";
 
 /**
  * SQL expression to normalize email subjects by stripping common
@@ -934,6 +934,72 @@ export class CalendarDO extends DurableObject<Env> {
 
 	async deleteEvent(id: string): Promise<boolean> {
 		const result = this.db.delete(schema.events).where(eq(schema.events.id, id)).run();
+		return result.meta.changes > 0;
+	}
+}
+
+export interface ContactData {
+	id: string;
+	name: string;
+	email: string;
+	phone?: string | null;
+	org?: string | null;
+	notes?: string | null;
+	avatar_url?: string | null;
+	created_at: string;
+	updated_at: string;
+}
+
+export class ContactsDO extends DurableObject<Env> {
+	declare __DURABLE_OBJECT_BRAND: never;
+	db: ReturnType<typeof drizzle>;
+
+	constructor(state: DurableObjectState, env: Env) {
+		super(state, env);
+		this.db = drizzle(this.ctx.storage, { schema });
+		applyMigrations(this.ctx.storage.sql, contactMigrations, this.ctx.storage);
+	}
+
+	async getContacts(): Promise<ContactData[]> {
+		return this.db.select().from(schema.contacts).orderBy(asc(schema.contacts.name)).all();
+	}
+
+	async getContact(id: string): Promise<ContactData | undefined> {
+		return this.db.select().from(schema.contacts).where(eq(schema.contacts.id, id)).get();
+	}
+
+	async createContact(contact: ContactData): Promise<ContactData> {
+		this.db.insert(schema.contacts).values(contact).run();
+		return contact;
+	}
+
+	async updateContact(id: string, updates: Partial<ContactData>): Promise<ContactData | undefined> {
+		this.db.update(schema.contacts).set(updates).where(eq(schema.contacts.id, id)).run();
+		return this.getContact(id);
+	}
+
+	async upsertContact(contact: { name?: string; email: string }): Promise<void> {
+		const existing = this.db.select().from(schema.contacts).where(eq(schema.contacts.email, contact.email)).get();
+		if (existing) {
+			if (contact.name && !existing.name && contact.name !== contact.email) {
+				this.db.update(schema.contacts)
+					.set({ name: contact.name, updated_at: new Date().toISOString() })
+					.where(eq(schema.contacts.id, existing.id))
+					.run();
+			}
+		} else {
+			this.db.insert(schema.contacts).values({
+				id: crypto.randomUUID(),
+				name: contact.name && contact.name !== contact.email ? contact.name : contact.email.split("@")[0],
+				email: contact.email,
+				created_at: new Date().toISOString(),
+				updated_at: new Date().toISOString(),
+			}).run();
+		}
+	}
+
+	async deleteContact(id: string): Promise<boolean> {
+		const result = this.db.delete(schema.contacts).where(eq(schema.contacts.id, id)).run();
 		return result.meta.changes > 0;
 	}
 }

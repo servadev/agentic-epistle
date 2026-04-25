@@ -49,6 +49,10 @@
 			{
 				"name": "CALENDAR",
 				"class_name": "CalendarDO"
+			},
+			{
+				"name": "CONTACTS",
+				"class_name": "ContactsDO"
 			}
 		]
 	},
@@ -75,6 +79,12 @@
 			"tag": "v4",
 			"new_sqlite_classes": [
 				"CalendarDO"
+			]
+		},
+		{
+			"tag": "v5",
+			"new_sqlite_classes": [
+				"ContactsDO"
 			]
 		}
 	]

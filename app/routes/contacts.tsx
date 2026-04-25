@@ -1,0 +1,321 @@
+import { useState, useMemo } from "react";
+import { useParams, Link } from "react-router";
+import { Button, Input, useKumoToastManager } from "@cloudflare/kumo";
+import { PlusIcon, XIcon, UserCircleIcon, MagnifyingGlassIcon, TrashIcon, BuildingsIcon, PhoneIcon } from "@phosphor-icons/react";
+import { useContacts, useCreateContact, useUpdateContact, useDeleteContact } from "~/queries/contacts";
+import { useSearchEmails } from "~/queries/search";
+import type { Contact } from "~/types";
+
+export default function ContactsRoute() {
+	const { mailboxId } = useParams<{ mailboxId: string }>();
+	const toastManager = useKumoToastManager();
+	
+	const { data: contactsData, isLoading } = useContacts(mailboxId);
+	const contacts = contactsData?.contacts || [];
+	
+	const [searchQuery, setSearchQuery] = useState("");
+	const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+	const [isEditOpen, setIsEditOpen] = useState(false);
+	const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+	
+	// Form state
+	const [editForm, setEditForm] = useState<Partial<Contact>>({ name: "", email: "", phone: "", org: "", notes: "" });
+
+	const createContactMutation = useCreateContact();
+	const updateContactMutation = useUpdateContact();
+	const deleteContactMutation = useDeleteContact();
+
+	const filteredContacts = useMemo(() => {
+		if (!searchQuery.trim()) return contacts;
+		const query = searchQuery.toLowerCase();
+		return contacts.filter(c => 
+			c.name.toLowerCase().includes(query) || 
+			c.email.toLowerCase().includes(query) ||
+			(c.org && c.org.toLowerCase().includes(query))
+		);
+	}, [contacts, searchQuery]);
+
+	// Fetch recent emails for selected contact
+	const { data: recentEmailsData } = useSearchEmails(mailboxId, 
+		selectedContact ? `from:${selectedContact.email} OR to:${selectedContact.email}` : "",
+		1
+	);
+
+	const recentEmails = recentEmailsData?.results?.slice(0, 5) || [];
+
+	const handleSave = async (e: React.FormEvent) => {
+		e.preventDefault();
+		if (!mailboxId) return;
+		
+		if (!editForm.name || !editForm.email) {
+			toastManager.add({ title: "Name and Email are required", variant: "error" });
+			return;
+		}
+
+		try {
+			if (selectedContact && isEditOpen) {
+				await updateContactMutation.mutateAsync({ mailboxId, id: selectedContact.id, contact: editForm });
+				toastManager.add({ title: "Contact updated successfully!" });
+			} else {
+				await createContactMutation.mutateAsync({ mailboxId, contact: editForm });
+				toastManager.add({ title: "Contact created successfully!" });
+			}
+			setIsEditOpen(false);
+			if (!selectedContact) {
+				setEditForm({ name: "", email: "", phone: "", org: "", notes: "" });
+			}
+		} catch (err) {
+			const message = (err instanceof Error ? err.message : null) || "Failed to save contact.";
+			toastManager.add({ title: message, variant: "error" });
+		}
+	};
+
+	const handleDelete = async () => {
+		if (!mailboxId || !selectedContact) return;
+		try {
+			await deleteContactMutation.mutateAsync({ mailboxId, id: selectedContact.id });
+			setSelectedContact(null);
+			setIsDeleteConfirmOpen(false);
+			toastManager.add({ title: "Contact deleted successfully!" });
+		} catch (err) {
+			const message = (err instanceof Error ? err.message : null) || "Failed to delete contact.";
+			toastManager.add({ title: message, variant: "error" });
+		}
+	};
+
+	return (
+		<div className="flex h-full bg-kumo-base overflow-hidden">
+			{/* Left panel: List */}
+			<div className="flex flex-col w-1/3 min-w-[300px] border-r border-kumo-line shrink-0">
+				<div className="p-4 border-b border-kumo-line flex flex-col gap-3">
+					<div className="flex items-center justify-between">
+						<h1 className="text-lg font-semibold text-kumo-default">Contacts</h1>
+						<Button 
+							variant="primary" 
+							size="sm" 
+							icon={<PlusIcon size={14} />} 
+							onClick={() => {
+								setSelectedContact(null);
+								setEditForm({ name: "", email: "", phone: "", org: "", notes: "" });
+								setIsEditOpen(true);
+							}}
+						>
+							New
+						</Button>
+					</div>
+					<div className="relative">
+						<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+							<MagnifyingGlassIcon className="text-kumo-subtle" />
+						</div>
+						<Input
+							placeholder="Search contacts..."
+							value={searchQuery}
+							onChange={(e) => setSearchQuery(e.target.value)}
+							className="pl-9"
+						/>
+					</div>
+				</div>
+				
+				<div className="flex-1 overflow-y-auto">
+					{isLoading ? (
+						<div className="p-4 text-center text-kumo-subtle text-sm">Loading...</div>
+					) : filteredContacts.length === 0 ? (
+						<div className="p-4 text-center text-kumo-subtle text-sm">No contacts found.</div>
+					) : (
+						<div className="divide-y divide-kumo-line">
+							{filteredContacts.map(contact => (
+								<button
+									key={contact.id}
+									type="button"
+									className={`w-full text-left p-3 hover:bg-kumo-tint transition-colors ${selectedContact?.id === contact.id ? "bg-kumo-tint" : ""}`}
+									onClick={() => {
+										setSelectedContact(contact);
+										setIsEditOpen(false);
+									}}
+								>
+									<div className="font-medium text-sm text-kumo-default truncate">{contact.name}</div>
+									<div className="text-xs text-kumo-subtle truncate">{contact.email}</div>
+								</button>
+							))}
+						</div>
+					)}
+				</div>
+			</div>
+
+			{/* Right panel: Details / Form */}
+			<div className="flex-1 flex flex-col min-w-0 bg-kumo-recessed">
+				{isEditOpen ? (
+					<div className="max-w-2xl w-full mx-auto p-8 flex flex-col gap-6">
+						<div className="flex items-center justify-between">
+							<h2 className="text-xl font-semibold text-kumo-default">
+								{selectedContact ? "Edit Contact" : "New Contact"}
+							</h2>
+							<Button variant="ghost" icon={<XIcon />} onClick={() => setIsEditOpen(false)} />
+						</div>
+						<form onSubmit={handleSave} className="flex flex-col gap-4 bg-kumo-base p-6 rounded-xl border border-kumo-line shadow-sm">
+							<div className="grid grid-cols-2 gap-4">
+								<Input 
+									label="Name" 
+									required 
+									value={editForm.name} 
+									onChange={e => setEditForm({...editForm, name: e.target.value})} 
+								/>
+								<Input 
+									label="Email" 
+									type="email" 
+									required 
+									value={editForm.email} 
+									onChange={e => setEditForm({...editForm, email: e.target.value})} 
+								/>
+							</div>
+							<div className="grid grid-cols-2 gap-4">
+								<Input 
+									label="Phone" 
+									value={editForm.phone || ""} 
+									onChange={e => setEditForm({...editForm, phone: e.target.value})} 
+								/>
+								<Input 
+									label="Organization" 
+									value={editForm.org || ""} 
+									onChange={e => setEditForm({...editForm, org: e.target.value})} 
+								/>
+							</div>
+							<div>
+								<label className="block text-sm font-medium text-kumo-default mb-1">Notes</label>
+								<textarea 
+									className="w-full rounded-md border border-kumo-line bg-kumo-base px-3 py-2 text-sm text-kumo-default focus:border-kumo-brand focus:outline-none focus:ring-1 focus:ring-kumo-brand resize-none"
+									rows={4}
+									value={editForm.notes || ""}
+									onChange={e => setEditForm({...editForm, notes: e.target.value})}
+								/>
+							</div>
+							<div className="flex justify-end gap-2 pt-2">
+								<Button variant="secondary" onClick={() => setIsEditOpen(false)}>Cancel</Button>
+								<Button variant="primary" type="submit" loading={createContactMutation.isPending || updateContactMutation.isPending}>
+									Save
+								</Button>
+							</div>
+						</form>
+					</div>
+				) : selectedContact ? (
+					<div className="flex-1 flex flex-col max-w-3xl mx-auto w-full p-8 overflow-y-auto">
+						<div className="flex items-start justify-between mb-8">
+							<div className="flex items-center gap-4">
+								<div className="w-16 h-16 rounded-full bg-kumo-tint flex items-center justify-center text-kumo-brand shrink-0">
+									<UserCircleIcon size={40} weight="light" />
+								</div>
+								<div>
+									<h2 className="text-2xl font-bold text-kumo-default">{selectedContact.name}</h2>
+									<div className="text-kumo-subtle">{selectedContact.email}</div>
+								</div>
+							</div>
+							<div className="flex items-center gap-2">
+								<Button 
+									variant="secondary" 
+									onClick={() => {
+										setEditForm({ 
+											name: selectedContact.name, 
+											email: selectedContact.email, 
+											phone: selectedContact.phone, 
+											org: selectedContact.org, 
+											notes: selectedContact.notes 
+										});
+										setIsEditOpen(true);
+									}}
+								>
+									Edit
+								</Button>
+								<Button variant="ghost" className="text-red-500 hover:text-red-600 hover:bg-red-50" icon={<TrashIcon />} onClick={() => setIsDeleteConfirmOpen(true)}>
+									Delete
+								</Button>
+							</div>
+						</div>
+
+						<div className="grid grid-cols-2 gap-6 mb-8">
+							{selectedContact.org && (
+								<div className="flex items-center gap-3 bg-kumo-base p-4 rounded-xl border border-kumo-line">
+									<div className="w-10 h-10 rounded-full bg-kumo-tint flex items-center justify-center text-kumo-subtle shrink-0">
+										<BuildingsIcon size={20} />
+									</div>
+									<div>
+										<div className="text-xs font-medium text-kumo-strong uppercase">Organization</div>
+										<div className="text-sm text-kumo-default">{selectedContact.org}</div>
+									</div>
+								</div>
+							)}
+							{selectedContact.phone && (
+								<div className="flex items-center gap-3 bg-kumo-base p-4 rounded-xl border border-kumo-line">
+									<div className="w-10 h-10 rounded-full bg-kumo-tint flex items-center justify-center text-kumo-subtle shrink-0">
+										<PhoneIcon size={20} />
+									</div>
+									<div>
+										<div className="text-xs font-medium text-kumo-strong uppercase">Phone</div>
+										<div className="text-sm text-kumo-default">{selectedContact.phone}</div>
+									</div>
+								</div>
+							)}
+						</div>
+
+						{selectedContact.notes && (
+							<div className="bg-kumo-base p-5 rounded-xl border border-kumo-line mb-8">
+								<div className="text-xs font-medium text-kumo-strong uppercase mb-2">Notes</div>
+								<div className="text-sm text-kumo-default whitespace-pre-wrap">{selectedContact.notes}</div>
+							</div>
+						)}
+
+						<div>
+							<h3 className="text-lg font-semibold text-kumo-default mb-4">Recent Emails</h3>
+							<div className="flex flex-col gap-2">
+								{recentEmails.length > 0 ? (
+									recentEmails.map(email => (
+										<Link
+											key={email.id}
+											to={`/mailbox/${mailboxId}/emails/inbox?selected=${email.id}`}
+											className="group flex flex-col gap-1 p-3 bg-kumo-base border border-kumo-line rounded-lg hover:border-kumo-brand transition-colors no-underline"
+										>
+											<div className="flex items-center justify-between">
+												<span className="font-medium text-sm text-kumo-default truncate">{email.subject || "(No subject)"}</span>
+												<span className="text-xs text-kumo-subtle shrink-0 ml-4">
+													{new Date(email.date).toLocaleDateString()}
+												</span>
+											</div>
+											<div className="text-xs text-kumo-subtle truncate">
+												{email.sender === selectedContact.email ? "From them" : "To them"}
+											</div>
+										</Link>
+									))
+								) : (
+									<div className="text-sm text-kumo-subtle p-4 text-center bg-kumo-base border border-kumo-line rounded-lg">
+										No recent emails found.
+									</div>
+								)}
+							</div>
+						</div>
+					</div>
+				) : (
+					<div className="flex-1 flex items-center justify-center text-kumo-subtle">
+						Select a contact to view details
+					</div>
+				)}
+			</div>
+
+			{/* Delete Confirmation Modal */}
+			{isDeleteConfirmOpen && selectedContact && (
+				<div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+					<div className="bg-kumo-base rounded-lg shadow-lg w-full max-w-sm overflow-hidden flex flex-col p-6">
+						<h2 className="text-lg font-semibold text-kumo-default mb-2">Delete Contact</h2>
+						<p className="text-kumo-subtle text-sm mb-6">
+							Are you sure you want to delete "{selectedContact.name}"? This action cannot be undone.
+						</p>
+						<div className="flex justify-end gap-3">
+							<Button variant="secondary" onClick={() => setIsDeleteConfirmOpen(false)}>Cancel</Button>
+							<Button variant="destructive" loading={deleteContactMutation.isPending} onClick={handleDelete}>
+								Delete
+							</Button>
+						</div>
+					</div>
+				</div>
+			)}
+		</div>
+	);
+}

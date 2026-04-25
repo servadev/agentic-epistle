@@ -54,3 +54,15 @@ export const events = sqliteTable("events", {
 	source: text("source"),
 });
 
+export const contacts = sqliteTable("contacts", {
+	id: text("id").primaryKey(),
+	name: text("name").notNull(),
+	email: text("email").notNull(),
+	phone: text("phone"),
+	org: text("org"),
+	notes: text("notes"),
+	avatar_url: text("avatar_url"),
+	created_at: text("created_at").notNull(),
+	updated_at: text("updated_at").notNull(),
+});
+

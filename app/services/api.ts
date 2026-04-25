@@ -2,7 +2,7 @@
 // Licensed under the Apache 2.0 license found in the LICENSE file or at:
 //     https://opensource.org/licenses/Apache-2.0
 
-import type { Email, Folder, Mailbox, CalendarEvent } from "~/types";
+import type { Email, Folder, Mailbox, CalendarEvent, Contact } from "~/types";
 
 const REQUEST_TIMEOUT_MS = 30_000;
 
@@ -77,6 +77,13 @@ function post<T>(url: string, body?: unknown, opts?: { signal?: AbortSignal }) {
 function put<T>(url: string, body?: unknown) {
 	return request<T>(url, {
 		method: "PUT",
+		body: body != null ? JSON.stringify(body) : undefined,
+	});
+}
+
+function patch<T>(url: string, body?: unknown) {
+	return request<T>(url, {
+		method: "PATCH",
 		body: body != null ? JSON.stringify(body) : undefined,
 	});
 }
@@ -170,6 +177,17 @@ const api = {
 		put<CalendarEvent>(`/api/v1/mailboxes/${mailboxId}/calendar/events/${id}`, event),
 	deleteEvent: (mailboxId: string, id: string) =>
 		del<void>(`/api/v1/mailboxes/${mailboxId}/calendar/events/${id}`),
+	// Contacts
+	listContacts: (mailboxId: string) =>
+		get<{ contacts: Contact[] }>(`/api/v1/mailboxes/${mailboxId}/contacts`),
+	getContact: (mailboxId: string, id: string) =>
+		get<{ contact: Contact }>(`/api/v1/mailboxes/${mailboxId}/contacts/${id}`),
+	createContact: (mailboxId: string, contact: Partial<Contact>) =>
+		post<{ contact: Contact }>(`/api/v1/mailboxes/${mailboxId}/contacts`, contact),
+	updateContact: (mailboxId: string, id: string, contact: Partial<Contact>) =>
+		patch<{ contact: Contact }>(`/api/v1/mailboxes/${mailboxId}/contacts/${id}`, contact),
+	deleteContact: (mailboxId: string, id: string) =>
+		del<void>(`/api/v1/mailboxes/${mailboxId}/contacts/${id}`),
 };
 
 export default api;

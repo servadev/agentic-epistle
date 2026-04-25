@@ -17,6 +17,7 @@ import {
 import { SendEmailRequestSchema } from "../lib/schemas";
 import { Folders } from "../../shared/folders";
 import type { MailboxContext } from "../lib/mailbox";
+import { mineContacts } from "../lib/contacts";
 
 type AppContext = Context<MailboxContext>;
 type RateLimitStub = { checkSendRateLimit: () => Promise<string | null> };
@@ -52,6 +53,14 @@ export async function handleReplyEmail(c: AppContext) {
 	if (rateLimitError) {
 		return c.json({ error: rateLimitError }, 429);
 	}
+
+	const allContactExtracts = [
+		...(Array.isArray(to) ? to : [to]),
+		...(Array.isArray(cc) ? cc : (cc ? [cc] : [])),
+		...(Array.isArray(bcc) ? bcc : (bcc ? [bcc] : [])),
+	];
+	const contactsStub = c.env.CONTACTS.get(c.env.CONTACTS.idFromName(mailboxId));
+	c.executionCtx.waitUntil(mineContacts(contactsStub, allContactExtracts));
 
 	const attachmentData = await storeAttachments(c.env.BUCKET, messageId, attachments);
 
@@ -142,6 +151,14 @@ export async function handleForwardEmail(c: AppContext) {
 	if (rateLimitError) {
 		return c.json({ error: rateLimitError }, 429);
 	}
+
+	const allContactExtracts = [
+		...(Array.isArray(to) ? to : [to]),
+		...(Array.isArray(cc) ? cc : (cc ? [cc] : [])),
+		...(Array.isArray(bcc) ? bcc : (bcc ? [bcc] : [])),
+	];
+	const contactsStub = c.env.CONTACTS.get(c.env.CONTACTS.idFromName(mailboxId));
+	c.executionCtx.waitUntil(mineContacts(contactsStub, allContactExtracts));
 
 	const attachmentData = await storeAttachments(c.env.BUCKET, messageId, attachments);
 

@@ -75,3 +75,15 @@ export interface CalendarEvent {
 	location?: string | null;
 	source?: string | null;
 }
+
+export interface Contact {
+	id: string;
+	name: string;
+	email: string;
+	phone?: string | null;
+	org?: string | null;
+	notes?: string | null;
+	avatar_url?: string | null;
+	created_at: string;
+	updated_at: string;
+}

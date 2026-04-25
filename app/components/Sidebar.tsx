@@ -13,6 +13,7 @@ import {
 	PlusIcon,
 	TrashIcon,
 	TrayIcon,
+	UsersIcon,
 } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
 import { NavLink, useNavigate, useParams } from "react-router";
@@ -169,6 +170,15 @@ export default function Sidebar() {
 						onClick={handleNavClick}
 					/>
 				))}
+
+				<div className="pt-2">
+					<FolderLink
+						to={`/mailbox/${mailboxId}/contacts`}
+						icon={<UsersIcon size={18} weight="regular" />}
+						label="Contacts"
+						onClick={handleNavClick}
+					/>
+				</div>
 
 				{/* Custom folders */}
 				{customFolders.length > 0 && (

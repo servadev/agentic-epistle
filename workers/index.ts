@@ -21,8 +21,9 @@ import { Folders } from "../shared/folders";
 import type { Env } from "./types";
 import { requireMailbox, type MailboxContext } from "./lib/mailbox";
 import { requireCalendar, type CalendarContext } from "./lib/calendar";
+import { requireContacts, type ContactsContext, mineContacts } from "./lib/contacts";
 
-type AppContext = Context<MailboxContext & CalendarContext>;
+type AppContext = Context<MailboxContext & CalendarContext & ContactsContext>;
 
 // -- Request body schemas (kept for validation) ---------------------
 
@@ -66,7 +67,7 @@ function boolQuery(c: AppContext, key: string): boolean | undefined {
 
 // -- App & middleware -----------------------------------------------
 
-const app = new Hono<MailboxContext & CalendarContext>();
+const app = new Hono<MailboxContext & CalendarContext & ContactsContext>();
 app.use("/api/*", cors({
 	origin: (origin) => {
 		// Same-origin requests have no Origin header — allow them.
@@ -84,6 +85,7 @@ app.use("/api/*", cors({
 }));
 app.use("/api/v1/mailboxes/:mailboxId/*", requireMailbox);
 app.use("/api/v1/mailboxes/:mailboxId/calendar/*", requireCalendar);
+app.use("/api/v1/mailboxes/:mailboxId/contacts/*", requireContacts);
 
 // -- Config ---------------------------------------------------------
 
@@ -179,6 +181,13 @@ app.post("/api/v1/mailboxes/:mailboxId/emails", async (c: AppContext) => {
 		if (e instanceof SenderValidationError) return c.json({ error: e.message }, 400);
 		throw e;
 	}
+
+	const allContactExtracts = [
+		...(Array.isArray(to) ? to : [to]),
+		...(Array.isArray(cc) ? cc : (cc ? [cc] : [])),
+		...(Array.isArray(bcc) ? bcc : (bcc ? [bcc] : [])),
+	];
+	c.executionCtx.waitUntil(mineContacts(c.get("contactsStub"), allContactExtracts));
 
 	const { messageId, outgoingMessageId } = generateMessageId(fromDomain);
 	const stub = c.var.mailboxStub;
@@ -420,6 +429,7 @@ async function receiveEmail(event: { raw: ReadableStream; rawSize: number }, env
 	if (!(await env.BUCKET.head(`mailboxes/${mailboxId}.json`))) { console.log(`Ignoring email for ${mailboxId}: mailbox does not exist`); return; }
 
 	const stub = env.MAILBOX.get(env.MAILBOX.idFromName(mailboxId));
+	const contactsStub = env.CONTACTS.get(env.CONTACTS.idFromName(mailboxId));
 
 	const attachmentData: StoredAttachment[] = [];
 	if (parsedEmail.attachments) {
@@ -445,6 +455,14 @@ async function receiveEmail(event: { raw: ReadableStream; rawSize: number }, env
 
 	const originalMessageId = parsedEmail.messageId ? extractMsgId(parsedEmail.messageId) : null;
 
+	const allContactExtracts = [
+		...(parsedEmail.from ? [parsedEmail.from] : []),
+		...(parsedEmail.to || []),
+		...(parsedEmail.cc || []),
+		...(parsedEmail.bcc || []),
+	];
+	ctx.waitUntil(mineContacts(contactsStub, allContactExtracts));
+
 	await stub.createEmail(Folders.INBOX, {
 		id: messageId, subject: parsedEmail.subject || "",
 		sender: (parsedEmail.from?.address || "").toLowerCase(), recipient: allRecipients.join(", "),
@@ -461,5 +479,54 @@ async function receiveEmail(event: { raw: ReadableStream; rawSize: number }, env
 		body: JSON.stringify({ mailboxId, emailId: messageId, sender: (parsedEmail.from?.address || "").toLowerCase(), subject: parsedEmail.subject || "", threadId }),
 	})).catch((e) => console.error("Auto-draft trigger failed:", (e as Error).message)));
 }
+
+// -- Contacts -------------------------------------------------------
+
+app.get("/api/v1/mailboxes/:mailboxId/contacts", async (c) => {
+	const stub = c.get("contactsStub");
+	const contacts = await stub.getContacts();
+	return c.json({ contacts });
+});
+
+app.get("/api/v1/mailboxes/:mailboxId/contacts/:id", async (c) => {
+	const stub = c.get("contactsStub");
+	const contact = await stub.getContact(c.req.param("id"));
+	if (!contact) return c.json({ error: "Not found" }, 404);
+	return c.json({ contact });
+});
+
+app.post("/api/v1/mailboxes/:mailboxId/contacts", async (c) => {
+	const body = await c.req.json();
+	const stub = c.get("contactsStub");
+	const now = new Date().toISOString();
+	const contact = await stub.createContact({
+		id: crypto.randomUUID(),
+		name: body.name || "",
+		email: body.email,
+		phone: body.phone || null,
+		org: body.org || null,
+		notes: body.notes || null,
+		avatar_url: body.avatar_url || null,
+		created_at: now,
+		updated_at: now,
+	});
+	return c.json({ contact });
+});
+
+app.patch("/api/v1/mailboxes/:mailboxId/contacts/:id", async (c) => {
+	const body = await c.req.json();
+	const stub = c.get("contactsStub");
+	const updates = { ...body, updated_at: new Date().toISOString() };
+	const contact = await stub.updateContact(c.req.param("id"), updates);
+	if (!contact) return c.json({ error: "Not found" }, 404);
+	return c.json({ contact });
+});
+
+app.delete("/api/v1/mailboxes/:mailboxId/contacts/:id", async (c) => {
+	const stub = c.get("contactsStub");
+	const success = await stub.deleteContact(c.req.param("id"));
+	if (!success) return c.json({ error: "Not found" }, 404);
+	return c.json({ status: "deleted" });
+});
 
 export { app, receiveEmail };
