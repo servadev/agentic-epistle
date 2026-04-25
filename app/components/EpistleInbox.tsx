@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import { useParams } from "react-router";
 import { 
   PencilSimpleIcon as Pen, 
   TrayIcon as Inbox, 
@@ -22,108 +23,92 @@ import {
   PaperPlaneRightIcon as PaperPlaneRight
 } from "@phosphor-icons/react";
 
-// --- Mock Data ---
+import { useFolders } from "~/queries/folders";
+import { useEmails, useThreadReplies, useMarkThreadRead } from "~/queries/emails";
+import { useContacts } from "~/queries/contacts";
+import { useMailboxes } from "~/queries/mailboxes";
+import { Folders, SYSTEM_FOLDER_IDS, getFolderDisplayName } from "shared/folders";
+import { formatListDate, formatShortDate } from "shared/dates";
+import { getSnippetText } from "~/lib/utils";
 
-const NAV_ITEMS = [
-  { id: "inbox", label: "Inbox", icon: Inbox, count: 10 },
-  { id: "important", label: "Important", icon: Star, count: 0 },
-  { id: "snoozed", label: "Snoozed", icon: Clock, count: 0 },
-  { id: "draft", label: "Draft", icon: FileText, count: 8 },
-  { id: "sent", label: "Sent", icon: Send, count: 0 },
-];
-
-const CATEGORIES = [
-  { id: "collab", label: "Collaboration", color: "bg-blue-400", count: 3 },
-  { id: "updates", label: "Updates", color: "bg-green-400", count: 14 },
-  { id: "invoices", label: "Invoices", color: "bg-purple-400", count: 0 },
-  { id: "topic1", label: "Project Alpha", color: "bg-orange-400", count: 0 },
-  { id: "topic2", label: "Marketing", color: "bg-pink-400", count: 0 },
-  { id: "topic3", label: "Design", color: "bg-teal-400", count: 0 },
-];
-
-const CONTACTS = [
-  { id: "c1", name: "Alice Freeman", avatar: "A" },
-  { id: "c2", name: "Bob Smith", avatar: "B" },
-  { id: "c3", name: "Charlie Davis", avatar: "C" },
-];
-
-const MESSAGES = [
-  {
-    id: "m1",
-    dateGroup: "Today",
-    sender: "Alice Freeman",
-    avatar: "A",
-    topic: "Project Alpha Sync",
-    tags: ["Project Alpha", "Collaboration"],
-    timestamp: "10:30 AM",
-    preview: "Are we still on for the sync later today? I have a few updates regarding the timeline.",
-    unread: true,
-  },
-  {
-    id: "m2",
-    dateGroup: "Today",
-    sender: "Bob Smith",
-    avatar: "B",
-    topic: "Weekly Updates",
-    tags: ["Updates"],
-    timestamp: "9:15 AM",
-    preview: "Here are the metrics for last week. Engagement is up by 15% across all channels.",
-    unread: false,
-  },
-  {
-    id: "m3",
-    dateGroup: "January 6",
-    sender: "Charlie Davis",
-    avatar: "C",
-    topic: "New Design Assets",
-    tags: ["Design", "Project Alpha"],
-    timestamp: "Jan 6",
-    preview: "I've attached the latest figma files. Let me know if you need any adjustments before the presentation.",
-    unread: false,
-  },
-];
-
-const THREAD_MESSAGES = [
-  {
-    id: "t1",
-    sender: "Alice Freeman",
-    avatar: "A",
-    isMe: false,
-    timestamp: "10:30 AM",
-    content: "Are we still on for the sync later today? I have a few updates regarding the timeline that we should discuss before the client call tomorrow."
-  },
-  {
-    id: "t2",
-    sender: "Me",
-    avatar: "M",
-    isMe: true,
-    timestamp: "10:45 AM",
-    content: "Yes, definitely! I've reviewed the preliminary notes you sent over. Can you also bring the revised budget estimates?"
-  },
-  {
-    id: "t3",
-    sender: "Alice Freeman",
-    avatar: "A",
-    isMe: false,
-    timestamp: "10:50 AM",
-    content: "Will do. See you at 2 PM."
+// --- Helper Functions ---
+function getFolderIcon(folderId: string) {
+  switch (folderId) {
+    case Folders.INBOX: return Inbox;
+    case Folders.SENT: return Send;
+    case Folders.DRAFT: return FileText;
+    case Folders.ARCHIVE: return Archive;
+    case Folders.TRASH: return Trash;
+    default: return Tag; // Fallback
   }
-];
+}
+
+const CATEGORY_COLORS = ["bg-blue-400", "bg-green-400", "bg-purple-400", "bg-orange-400", "bg-pink-400", "bg-teal-400"];
 
 export default function EpistleInbox() {
+  const { mailboxId: routeMailboxId } = useParams<{ mailboxId: string }>();
+  const { data: mailboxes = [] } = useMailboxes();
+  const mailboxId = routeMailboxId || mailboxes[0]?.id;
+
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
+  const [selectedFolder, setSelectedFolder] = useState<string>(Folders.INBOX);
 
-  // Group messages by dateGroup
-  const groupedMessages = MESSAGES.reduce((acc, msg) => {
-    if (!acc[msg.dateGroup]) acc[msg.dateGroup] = [];
-    acc[msg.dateGroup].push(msg);
-    return acc;
-  }, {} as Record<string, typeof MESSAGES>);
+  // Data Queries
+  const { data: folders = [] } = useFolders(mailboxId);
+  const { data: contactsData } = useContacts(mailboxId);
+  const { data: emailData } = useEmails(mailboxId, { folder: selectedFolder, limit: "50" });
+  
+  const emails = emailData?.emails ?? [];
+  const contacts = contactsData?.contacts ?? [];
+  
+  const activeEmail = emails.find(e => e.id === activeMessageId || e.thread_id === activeMessageId);
+  const activeThreadId = activeEmail?.thread_id || activeEmail?.id || activeMessageId;
+  
+  const { data: threadEmails = [] } = useThreadReplies(mailboxId, activeThreadId);
+  const markThreadRead = useMarkThreadRead();
 
+  useEffect(() => {
+    if (activeThreadId && mailboxId) {
+      // Mark as read when opened
+      markThreadRead.mutate({ mailboxId, threadId: activeThreadId });
+    }
+  }, [activeThreadId, mailboxId]);
+
+  // Derived state
   const isThreadOpenOnMobile = activeMessageId !== null;
   const isSidebarCollapsed = desktopCollapsed;
+
+  // Split folders
+  const systemFolders = folders.filter(f => SYSTEM_FOLDER_IDS.includes(f.id as any));
+  const customFolders = folders.filter(f => !SYSTEM_FOLDER_IDS.includes(f.id as any) && f.id !== Folders.SPAM);
+
+  // Group messages by date
+  const groupedMessages = useMemo(() => {
+    const groups: Record<string, typeof emails> = {};
+    for (const msg of emails) {
+      let groupName = "Older";
+      if (msg.date) {
+        const d = new Date(msg.date);
+        if (!isNaN(d.getTime())) {
+          const today = new Date();
+          if (d.toDateString() === today.toDateString()) {
+            groupName = "Today";
+          } else if (d.getFullYear() === today.getFullYear()) {
+            groupName = d.toLocaleDateString(undefined, { month: "long", day: "numeric" });
+          } else {
+            groupName = d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+          }
+        }
+      }
+      if (!groups[groupName]) groups[groupName] = [];
+      groups[groupName].push(msg);
+    }
+    return groups;
+  }, [emails]);
+
+  const activeFolderName = getFolderDisplayName(selectedFolder);
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-white text-gray-800 font-sans">
@@ -165,24 +150,26 @@ export default function EpistleInbox() {
         <div className="flex-1 overflow-y-auto overflow-x-hidden py-2 custom-scrollbar">
           {/* Main Nav */}
           <nav className="space-y-1 px-3">
-            {NAV_ITEMS.map((item) => {
-              const Icon = item.icon;
+            {systemFolders.map((folder) => {
+              const Icon = getFolderIcon(folder.id);
+              const isSelected = selectedFolder === folder.id;
               return (
                 <button 
-                  key={item.id}
+                  key={folder.id}
+                  onClick={() => setSelectedFolder(folder.id)}
                   className={`
                     w-full flex items-center rounded-md py-2 px-3 transition-colors
-                    ${item.id === "inbox" ? "bg-gray-200 text-gray-900 font-medium" : "text-gray-600 hover:bg-gray-100"}
+                    ${isSelected ? "bg-gray-200 text-gray-900 font-medium" : "text-gray-600 hover:bg-gray-100"}
                     ${isSidebarCollapsed ? "justify-center" : "justify-between"}
                   `}
-                  title={isSidebarCollapsed ? item.label : undefined}
+                  title={isSidebarCollapsed ? folder.name : undefined}
                 >
                   <div className="flex items-center">
-                    <Icon size={20} weight={item.id === "inbox" ? "fill" : "regular"} />
-                    {!isSidebarCollapsed && <span className="ml-3">{item.label}</span>}
+                    <Icon size={20} weight={isSelected ? "fill" : "regular"} />
+                    {!isSidebarCollapsed && <span className="ml-3">{folder.name}</span>}
                   </div>
-                  {!isSidebarCollapsed && item.count > 0 && (
-                    <span className="text-xs font-semibold text-gray-500">{item.count}</span>
+                  {!isSidebarCollapsed && folder.unreadCount > 0 && (
+                    <span className="text-xs font-semibold text-gray-500">{folder.unreadCount}</span>
                   )}
                 </button>
               );
@@ -197,59 +184,69 @@ export default function EpistleInbox() {
           </nav>
 
           {/* Categories */}
-          <div className="mt-8 px-3">
-            {!isSidebarCollapsed && (
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-3">
-                Categories
-              </h3>
-            )}
-            <div className="space-y-1">
-              {CATEGORIES.map((cat) => (
-                <button 
-                  key={cat.id}
-                  className={`
-                    w-full flex items-center rounded-md py-1.5 px-3 hover:bg-gray-100 transition-colors text-gray-600
-                    ${isSidebarCollapsed ? "justify-center" : "justify-between"}
-                  `}
-                  title={isSidebarCollapsed ? cat.label : undefined}
-                >
-                  <div className="flex items-center">
-                    <div className={`w-3 h-3 rounded-sm ${cat.color}`} />
-                    {!isSidebarCollapsed && <span className="ml-3 text-sm truncate max-w-[120px] text-left">{cat.label}</span>}
-                  </div>
-                  {!isSidebarCollapsed && cat.count > 0 && (
-                    <span className="text-xs text-gray-400">{cat.count}</span>
-                  )}
-                </button>
-              ))}
+          {customFolders.length > 0 && (
+            <div className="mt-8 px-3">
+              {!isSidebarCollapsed && (
+                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-3">
+                  Categories
+                </h3>
+              )}
+              <div className="space-y-1">
+                {customFolders.map((cat, index) => (
+                  <button 
+                    key={cat.id}
+                    onClick={() => setSelectedFolder(cat.id)}
+                    className={`
+                      w-full flex items-center rounded-md py-1.5 px-3 hover:bg-gray-100 transition-colors text-gray-600
+                      ${selectedFolder === cat.id ? "bg-gray-100 text-gray-900 font-medium" : ""}
+                      ${isSidebarCollapsed ? "justify-center" : "justify-between"}
+                    `}
+                    title={isSidebarCollapsed ? cat.name : undefined}
+                  >
+                    <div className="flex items-center">
+                      <div className={`w-3 h-3 rounded-sm ${CATEGORY_COLORS[index % CATEGORY_COLORS.length]}`} />
+                      {!isSidebarCollapsed && <span className="ml-3 text-sm truncate max-w-[120px] text-left">{cat.name}</span>}
+                    </div>
+                    {!isSidebarCollapsed && cat.unreadCount > 0 && (
+                      <span className="text-xs text-gray-400">{cat.unreadCount}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Contacts */}
-          <div className="mt-8 px-3 mb-6">
-            {!isSidebarCollapsed && (
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-3">
-                Contacts
-              </h3>
-            )}
-            <div className="space-y-1">
-              {CONTACTS.map((contact) => (
-                <button 
-                  key={contact.id}
-                  className={`
-                    w-full flex items-center rounded-md py-1.5 px-3 hover:bg-gray-100 transition-colors
-                    ${isSidebarCollapsed ? "justify-center" : "justify-start"}
-                  `}
-                  title={isSidebarCollapsed ? contact.name : undefined}
-                >
-                  <div className="w-6 h-6 rounded bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-semibold flex-shrink-0">
-                    {contact.avatar}
-                  </div>
-                  {!isSidebarCollapsed && <span className="ml-3 text-sm text-gray-600 truncate">{contact.name}</span>}
-                </button>
-              ))}
+          {contacts.length > 0 && (
+            <div className="mt-8 px-3 mb-6">
+              {!isSidebarCollapsed && (
+                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-3">
+                  Contacts
+                </h3>
+              )}
+              <div className="space-y-1">
+                {contacts.slice(0, 10).map((contact) => (
+                  <button 
+                    key={contact.id}
+                    className={`
+                      w-full flex items-center rounded-md py-1.5 px-3 hover:bg-gray-100 transition-colors
+                      ${isSidebarCollapsed ? "justify-center" : "justify-start"}
+                    `}
+                    title={isSidebarCollapsed ? contact.name : undefined}
+                  >
+                    <div className="w-6 h-6 rounded bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-semibold flex-shrink-0">
+                      {contact.avatar_url ? (
+                        <img src={contact.avatar_url} alt={contact.name} className="w-full h-full rounded" />
+                      ) : (
+                        contact.name.charAt(0).toUpperCase()
+                      )}
+                    </div>
+                    {!isSidebarCollapsed && <span className="ml-3 text-sm text-gray-600 truncate">{contact.name}</span>}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Toggle Sidebar Button */}
@@ -279,81 +276,86 @@ export default function EpistleInbox() {
           >
             <Menu size={24} />
           </button>
-          <h1 className="font-semibold text-lg">Inbox</h1>
+          <h1 className="font-semibold text-lg">{activeFolderName}</h1>
         </div>
 
         {/* Filter Tabs */}
         <div className="p-4 border-b border-gray-100 overflow-x-auto no-scrollbar whitespace-nowrap">
           <div className="flex space-x-2">
             <button className="px-3 py-1.5 bg-slate-700 text-white text-sm rounded-full font-medium shadow-sm">
-              All messages (25)
+              All messages ({emailData?.totalCount || 0})
             </button>
             <button className="px-3 py-1.5 bg-gray-100 text-gray-600 hover:bg-gray-200 text-sm rounded-full font-medium transition-colors">
-              Unread (10)
-            </button>
-            <button className="px-3 py-1.5 bg-gray-100 text-gray-600 hover:bg-gray-200 text-sm rounded-full font-medium transition-colors">
-              Project Alpha
+              Unread
             </button>
           </div>
         </div>
 
         {/* List */}
         <div className="flex-1 overflow-y-auto">
-          {Object.entries(groupedMessages).map(([date, msgs]) => (
-            <div key={date} className="mb-4">
-              <div className="sticky top-0 bg-white/95 backdrop-blur-sm z-10 px-4 py-2 text-xs font-semibold text-gray-500">
-                {date}
-              </div>
-              <div>
-                {msgs.map((msg) => {
-                  const isActive = activeMessageId === msg.id;
-                  return (
-                    <button
-                      key={msg.id}
-                      onClick={() => setActiveMessageId(msg.id)}
-                      className={`
-                        w-full text-left p-4 border-b border-gray-50 transition-all
-                        ${isActive ? "bg-indigo-50/50 relative" : "hover:bg-gray-50 bg-white"}
-                      `}
-                    >
-                      {isActive && <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500 rounded-r" />}
-                      
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex space-x-1 overflow-hidden">
-                          {msg.tags.map(tag => (
-                            <span key={tag} className="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] uppercase font-bold tracking-wider rounded-sm whitespace-nowrap">
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                        <span className="text-xs text-gray-400 whitespace-nowrap ml-2">{msg.timestamp}</span>
-                      </div>
-                      
-                      <div className="flex items-start">
-                        <div className="w-10 h-10 rounded-lg bg-slate-200 text-slate-600 flex flex-shrink-0 items-center justify-center font-bold text-sm mr-3">
-                          {msg.avatar}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <h4 className={`text-sm truncate ${msg.unread ? "font-bold text-gray-900" : "font-semibold text-gray-700"}`}>
-                              {msg.sender}
-                            </h4>
-                            {msg.unread && <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 ml-2" />}
-                          </div>
-                          <h5 className={`text-sm truncate mt-0.5 ${msg.unread ? "font-semibold text-gray-800" : "text-gray-600"}`}>
-                            {msg.topic}
-                          </h5>
-                          <p className="text-sm text-gray-500 mt-1 line-clamp-2 leading-relaxed">
-                            {msg.preview}
-                          </p>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+          {emails.length === 0 ? (
+            <div className="p-8 text-center text-gray-400 text-sm">
+              No messages in {activeFolderName.toLowerCase()}
             </div>
-          ))}
+          ) : (
+            Object.entries(groupedMessages).map(([date, msgs]) => (
+              <div key={date} className="mb-4">
+                <div className="sticky top-0 bg-white/95 backdrop-blur-sm z-10 px-4 py-2 text-xs font-semibold text-gray-500">
+                  {date}
+                </div>
+                <div>
+                  {msgs.map((msg) => {
+                    const isActive = activeMessageId === msg.id || activeMessageId === msg.thread_id;
+                    const unread = !msg.read;
+                    const senderName = msg.sender.split("<")[0].trim() || msg.sender;
+                    
+                    return (
+                      <button
+                        key={msg.id}
+                        onClick={() => setActiveMessageId(msg.thread_id || msg.id)}
+                        className={`
+                          w-full text-left p-4 border-b border-gray-50 transition-all
+                          ${isActive ? "bg-indigo-50/50 relative" : "hover:bg-gray-50 bg-white"}
+                        `}
+                      >
+                        {isActive && <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500 rounded-r" />}
+                        
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex space-x-1 overflow-hidden">
+                            {/* In a real app we'd map over actual labels/tags. For now we can show a placeholder or nothing */}
+                          </div>
+                          <span className="text-xs text-gray-400 whitespace-nowrap ml-2">{formatListDate(msg.date)}</span>
+                        </div>
+                        
+                        <div className="flex items-start">
+                          <div className="w-10 h-10 rounded-lg bg-slate-200 text-slate-600 flex flex-shrink-0 items-center justify-center font-bold text-sm mr-3">
+                            {senderName.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <h4 className={`text-sm truncate ${unread ? "font-bold text-gray-900" : "font-semibold text-gray-700"}`}>
+                                {senderName}
+                                {msg.thread_count && msg.thread_count > 1 && (
+                                  <span className="text-gray-400 font-normal ml-1">({msg.thread_count})</span>
+                                )}
+                              </h4>
+                              {unread && <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 ml-2" />}
+                            </div>
+                            <h5 className={`text-sm truncate mt-0.5 ${unread ? "font-semibold text-gray-800" : "text-gray-600"}`}>
+                              {msg.subject || "(No subject)"}
+                            </h5>
+                            <p className="text-sm text-gray-500 mt-1 line-clamp-2 leading-relaxed">
+                              {getSnippetText(msg.snippet) || "..."}
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
@@ -364,7 +366,7 @@ export default function EpistleInbox() {
           ${isThreadOpenOnMobile ? "translate-x-0" : "translate-x-full lg:translate-x-0"}
         `}
       >
-        {activeMessageId ? (
+        {activeThreadId ? (
           <>
             {/* Toolbar */}
             <div className="h-14 border-b border-gray-200 bg-white flex items-center justify-between px-4 flex-shrink-0 shadow-sm z-10">
@@ -391,16 +393,6 @@ export default function EpistleInbox() {
               </div>
               
               <div className="flex items-center space-x-2">
-                <div className="hidden sm:flex space-x-2 mr-2">
-                  <span className="flex items-center px-2.5 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-full">
-                    Project Alpha
-                    <button className="ml-1.5 hover:text-gray-900">&times;</button>
-                  </span>
-                  <span className="flex items-center px-2.5 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-full">
-                    Collaboration
-                    <button className="ml-1.5 hover:text-gray-900">&times;</button>
-                  </span>
-                </div>
                 <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-md transition-colors">
                   <DotsThree size={24} weight="bold" />
                 </button>
@@ -410,36 +402,42 @@ export default function EpistleInbox() {
             {/* Thread Content */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
               {/* Thread Header */}
-              <div className="mb-8 flex items-center">
-                <div className="w-12 h-12 rounded-xl bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-lg mr-4">
-                  A
+              {activeEmail && (
+                <div className="mb-8 flex items-center">
+                  <div className="w-12 h-12 rounded-xl bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-lg mr-4">
+                    {activeEmail.sender.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">{activeEmail.subject || "(No subject)"}</h2>
+                    <p className="text-sm text-gray-500 mt-0.5">{activeEmail.sender}</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900">Project Alpha Sync</h2>
-                  <p className="text-sm text-gray-500 mt-0.5">Alice Freeman &lt;alice@example.com&gt;</p>
-                </div>
-              </div>
+              )}
 
               {/* Messages */}
               <div className="space-y-6 mb-8">
-                <div className="text-center">
-                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider bg-[#fcfcfd] px-2">Today</span>
-                </div>
-                
-                {THREAD_MESSAGES.map((msg) => (
-                  <div key={msg.id} className={`flex flex-col ${msg.isMe ? "items-end" : "items-start"}`}>
-                    <span className="text-xs text-gray-400 mb-1.5 px-1">{msg.timestamp}</span>
-                    <div className={`
-                      max-w-[85%] sm:max-w-[75%] p-4 rounded-2xl shadow-sm
-                      ${msg.isMe 
-                        ? "bg-slate-700 text-white rounded-tr-sm" 
-                        : "bg-white border border-gray-100 text-gray-800 rounded-tl-sm"
-                      }
-                    `}>
-                      <p className="text-[15px] leading-relaxed">{msg.content}</p>
+                {threadEmails.map((msg) => {
+                  // For the UI demonstration, let's treat any email not from the "sender" of the activeEmail as "Me"
+                  // Alternatively, we could check if msg.sender includes our mailbox email address.
+                  // Since we don't have the current user's email easily accessible right here without another hook,
+                  // we'll guess based on if it matches the thread starter.
+                  const isMe = activeEmail && msg.sender !== activeEmail.sender;
+                  
+                  return (
+                    <div key={msg.id} className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}>
+                      <span className="text-xs text-gray-400 mb-1.5 px-1">{formatShortDate(msg.date)}</span>
+                      <div className={`
+                        max-w-[85%] sm:max-w-[75%] p-4 rounded-2xl shadow-sm
+                        ${isMe 
+                          ? "bg-slate-700 text-white rounded-tr-sm" 
+                          : "bg-white border border-gray-100 text-gray-800 rounded-tl-sm"
+                        }
+                      `}>
+                        <div className="text-[15px] leading-relaxed break-words" dangerouslySetInnerHTML={{ __html: msg.body || msg.snippet || "" }} />
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
