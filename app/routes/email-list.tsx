@@ -20,7 +20,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router";
 import { Folders } from "shared/folders";
-import { formatListDate } from "shared/dates";
+import { formatListDate, formatShortDate } from "shared/dates";
 import MailboxSplitView from "~/components/MailboxSplitView";
 import { getSnippetText } from "~/lib/utils";
 import {
@@ -138,6 +138,27 @@ function FolderEmptyState({
 			)}
 		</div>
 	);
+}
+
+// Helper for date grouping
+function getGroupHeader(dateStr: string): string {
+	const date = new Date(dateStr);
+	if (isNaN(date.getTime())) return "Older";
+
+	const now = new Date();
+	const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+	const yesterday = new Date(today);
+	yesterday.setDate(yesterday.getDate() - 1);
+
+	const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+	if (d.getTime() === today.getTime()) return "Today";
+	if (d.getTime() === yesterday.getTime()) return "Yesterday";
+
+	if (d.getFullYear() === today.getFullYear()) {
+		return date.toLocaleDateString("en-US", { month: "long", day: "numeric" });
+	}
+	return date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 }
 
 export default function EmailListRoute() {
@@ -327,129 +348,160 @@ export default function EmailListRoute() {
 					<EmailListSkeleton />
 				) : emails.length > 0 ? (
 						<div>
-							{emails.map((email) => {
-								const isSelected = selectedEmailId === email.id;
-								const snippet = getSnippetText(email.snippet);
-								return (
-									<div
-										key={email.id}
-										role="button"
-										tabIndex={0}
-										onClick={() => handleRowClick(email)}
-										onKeyDown={(e) => {
-											if (e.key === "Enter" || e.key === " ") {
-												e.preventDefault();
-												handleRowClick(email);
-											}
-										}}
-										className={`group flex items-center gap-3 w-full text-left cursor-pointer transition-colors border-b border-slate-200 px-4 py-2.5 md:px-6 md:py-3 ${
-											isPanelOpen ? "md:px-4 md:py-2.5" : ""
-										} ${isSelected ? "bg-slate-200 shadow-sm border-l-4 border-l-slate-600" : "hover:bg-slate-50 border-l-4 border-l-transparent"}`}
-									>
-										{/* Unread dot */}
-										<div className="w-2.5 shrink-0 flex justify-center">
-											{hasUnread(email) && (
-												<div className="h-2 w-2 rounded-full bg-slate-600" />
-											)}
-										</div>
+							{useMemo(() => {
+								const groups: { header: string; emails: Email[] }[] = [];
+								let currentHeader = "";
 
-										{/* Star */}
-										<button
-											type="button"
-											className="shrink-0 p-0.5 bg-transparent border-0 cursor-pointer"
-											onClick={(e) => {
-												e.stopPropagation();
-												toggleStar(e, email);
-											}}
-										>
-											<StarIcon
-												size={16}
-												weight={email.starred ? "fill" : "regular"}
-												className={
-													email.starred
-														? "text-amber-500"
-														: "text-slate-400 hover:text-amber-500"
-												}
-											/>
-										</button>
+								emails.forEach((email) => {
+									const header = getGroupHeader(email.date);
+									if (header !== currentHeader) {
+										groups.push({ header, emails: [email] });
+										currentHeader = header;
+									} else {
+										groups[groups.length - 1].emails.push(email);
+									}
+								});
+								return groups;
+							}, [emails]).map((group) => (
+								<div key={group.header}>
+									<div className="sticky top-0 z-10 bg-white/95 backdrop-blur px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+										{group.header}
+									</div>
+									{group.emails.map((email) => {
+										const isSelected = selectedEmailId === email.id;
+										const snippet = getSnippetText(email.snippet);
+										return (
+											<div
+												key={email.id}
+												role="button"
+												tabIndex={0}
+												onClick={() => handleRowClick(email)}
+												onKeyDown={(e) => {
+													if (e.key === "Enter" || e.key === " ") {
+														e.preventDefault();
+														handleRowClick(email);
+													}
+												}}
+												className={`group relative flex items-start gap-3 w-full text-left cursor-pointer transition-colors border-b border-slate-200 py-3 md:py-4 ${
+													isSelected 
+														? `bg-indigo-50 border-l-4 border-l-indigo-600 pl-3 pr-4 md:pl-5 md:pr-6 ${isPanelOpen ? "md:pr-4 md:pl-3" : ""}`
+														: `bg-white hover:bg-slate-50 px-4 md:px-6 ${isPanelOpen ? "md:px-4" : ""}`
+												}`}
+											>
+												{/* Unread dot */}
+												<div className="w-2.5 pt-2 shrink-0 flex justify-center">
+													{hasUnread(email) && (
+														<div className="h-2 w-2 rounded-full bg-teal-500" />
+													)}
+												</div>
 
-										{/* Content */}
-										<div className="min-w-0 flex-1">
-											<div className="flex items-center gap-2">
-												<span
-													className={`truncate text-sm ${hasUnread(email) ? "font-semibold text-slate-900" : "text-slate-700"}`}
-												>
-													{formatParticipants(email)}
-												</span>
-												{(email.thread_count ?? 1) > 1 && (
-													<span className="shrink-0 text-xs text-slate-500 bg-slate-200 rounded-full px-1.5 py-0.5 font-medium">
-														{email.thread_count}
-													</span>
-												)}
-												{email.has_draft && (
-													<span className="shrink-0 text-xs text-red-500 font-medium">
-														Draft
-													</span>
-												)}
-												{email.needs_reply && !email.has_draft && (
-													<Tooltip content="Needs reply" asChild>
-														<span className="shrink-0 text-amber-500">
-															<ArrowBendUpLeftIcon size={14} weight="bold" />
+												{/* Avatar */}
+												<div className="pt-0.5 shrink-0">
+													<div className="h-10 w-10 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-lg font-bold">
+														{formatParticipants(email).charAt(0).toUpperCase()}
+													</div>
+												</div>
+
+												{/* Content */}
+												<div className="min-w-0 flex-1 flex flex-col gap-0.5">
+													{/* Topic tag pills placeholder - if data had tags, render here */}
+													<div className="flex gap-2 mb-1">
+														<span className="inline-flex items-center gap-1.5 rounded-md bg-white px-2 py-0.5 text-[10px] font-bold text-slate-600 ring-1 ring-inset ring-slate-200 shadow-sm uppercase tracking-wider">
+															<span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
+															Design
 														</span>
-													</Tooltip>
-												)}
-												<span className="text-sm text-slate-500 shrink-0 ml-auto">
-													{formatListDate(email.date)}
-												</span>
-											</div>
-											<div className="truncate text-sm mt-0.5">
-												<span
-													className={hasUnread(email) ? "font-medium text-slate-900" : "text-slate-500"}
-												>
-													{email.subject}
-												</span>
-											{snippet && (
-												<span className="text-slate-400 font-normal">
-													{" "}&mdash; {snippet}
-												</span>
-											)}
-										</div>
-									</div>
+													</div>
 
-										{/* Hover actions */}
-										<div className="hidden group-hover:flex items-center shrink-0">
-											<Tooltip content={email.read ? "Mark unread" : "Mark read"} asChild>
-												<Button
-													variant="ghost"
-													shape="square"
-													size="sm"
-													icon={email.read ? <EnvelopeSimpleIcon size={14} /> : <EnvelopeOpenIcon size={14} />}
-													onClick={(e) => {
-														e.stopPropagation();
-														if (mailboxId)
-															updateEmail.mutate({
-																mailboxId,
-																id: email.id,
-																data: { read: !email.read },
-															});
-													}}
-													aria-label={email.read ? "Mark unread" : "Mark read"}
-												/>
-											</Tooltip>
-											<Tooltip content="Delete" asChild>
-												<Button
-													variant="ghost"
-													shape="square"
-													size="sm"
-													icon={<TrashIcon size={14} />}
-													onClick={(e) => handleDelete(e, email.id)}
-													aria-label="Delete"
-												/>
-											</Tooltip>
-										</div>
-									</div>
-								);
-							})}
+													<div className="flex items-center justify-between gap-2">
+														<span
+															className={`truncate text-sm ${hasUnread(email) ? "font-bold text-slate-900" : "font-medium text-slate-700"}`}
+														>
+															{formatParticipants(email)}
+														</span>
+														<div className="flex items-center gap-2 shrink-0">
+															<button
+																type="button"
+																className={`p-0.5 bg-transparent border-0 cursor-pointer ${email.starred ? "opacity-100" : "opacity-0 group-hover:opacity-100 focus:opacity-100"}`}
+																onClick={(e) => {
+																	e.stopPropagation();
+																	toggleStar(e, email);
+																}}
+															>
+																<StarIcon
+																	size={14}
+																	weight={email.starred ? "fill" : "regular"}
+																	className={
+																		email.starred
+																			? "text-amber-500"
+																			: "text-slate-400 hover:text-amber-500"
+																	}
+																/>
+															</button>
+															<span className={`text-xs ${hasUnread(email) ? "font-bold text-teal-600" : "text-slate-500"}`}>
+																{formatShortDate(email.date)}
+															</span>
+														</div>
+													</div>
+													
+													<div className="flex items-center gap-1.5">
+														<span
+															className={`truncate text-sm ${hasUnread(email) ? "font-bold text-slate-900" : "font-semibold text-slate-800"}`}
+														>
+															{email.subject}
+														</span>
+														{(email.thread_count ?? 1) > 1 && (
+															<span className="shrink-0 text-[10px] text-slate-500 bg-slate-200 rounded-full px-1.5 py-0.5 font-bold">
+																{email.thread_count}
+															</span>
+														)}
+														{email.has_draft && (
+															<span className="shrink-0 text-[10px] text-amber-600 bg-amber-100 rounded-sm px-1 font-bold uppercase tracking-wide">
+																Draft
+															</span>
+														)}
+													</div>
+
+													<div className="text-sm text-slate-500 line-clamp-2 leading-relaxed mt-0.5">
+														{snippet || <span className="italic text-slate-400">No content</span>}
+													</div>
+												</div>
+
+												{/* Hover actions */}
+												<div className="hidden group-hover:flex items-center shrink-0 absolute top-3 right-4 bg-white/90 backdrop-blur rounded-md shadow-sm border border-slate-200">
+													<Tooltip content={email.read ? "Mark unread" : "Mark read"} asChild>
+														<Button
+															variant="ghost"
+															shape="square"
+															size="sm"
+															icon={email.read ? <EnvelopeSimpleIcon size={14} /> : <EnvelopeOpenIcon size={14} />}
+															onClick={(e) => {
+																e.stopPropagation();
+																if (mailboxId)
+																	updateEmail.mutate({
+																		mailboxId,
+																		id: email.id,
+																		data: { read: !email.read },
+																	});
+															}}
+															aria-label={email.read ? "Mark unread" : "Mark read"}
+														/>
+													</Tooltip>
+													<Tooltip content="Delete" asChild>
+														<Button
+															variant="ghost"
+															shape="square"
+															size="sm"
+															icon={<TrashIcon size={14} />}
+															onClick={(e) => handleDelete(e, email.id)}
+															aria-label="Delete"
+														/>
+													</Tooltip>
+												</div>
+											</div>
+										);
+									})}
+								</div>
+							))}
 						</div>
 					) : (
 						<FolderEmptyState
