@@ -32,6 +32,7 @@ export default function CalendarRoute() {
 	
 	const [isNewEventOpen, setIsNewEventOpen] = useState(false);
 	const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+	const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
 	const nextWeek = () => setCurrentDate(addDays(currentDate, 7));
 	const prevWeek = () => setCurrentDate(addDays(currentDate, -7));
@@ -197,13 +198,34 @@ export default function CalendarRoute() {
 							)}
 						</div>
 						<div className="p-4 border-t border-kumo-line">
-							<Button variant="destructive" className="w-full" onClick={() => handleDeleteEvent(selectedEvent.id)}>
+							<Button variant="destructive" className="w-full" onClick={() => setIsDeleteConfirmOpen(true)}>
 								Delete Event
 							</Button>
 						</div>
 					</div>
 				)}
 			</div>
+
+			{/* Delete Confirmation Modal */}
+			{isDeleteConfirmOpen && selectedEvent && (
+				<div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+					<div className="bg-kumo-base rounded-lg shadow-lg w-full max-w-sm overflow-hidden flex flex-col p-6">
+						<h2 className="text-lg font-semibold text-kumo-default mb-2">Delete Event</h2>
+						<p className="text-kumo-subtle text-sm mb-6">
+							Are you sure you want to delete "{selectedEvent.title}"? This action cannot be undone.
+						</p>
+						<div className="flex justify-end gap-3">
+							<Button variant="secondary" onClick={() => setIsDeleteConfirmOpen(false)}>Cancel</Button>
+							<Button variant="destructive" loading={deleteEventMutation.isPending} onClick={async () => {
+								await handleDeleteEvent(selectedEvent.id);
+								setIsDeleteConfirmOpen(false);
+							}}>
+								Delete
+							</Button>
+						</div>
+					</div>
+				</div>
+			)}
 
 			{/* New Event Modal (Simple overlay) */}
 			{isNewEventOpen && (

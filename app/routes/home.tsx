@@ -294,8 +294,12 @@ export default function HomeRoute() {
 	const todayEnd = endOfDay(new Date()).toISOString();
 	const { data: todayEvents = [] } = useEvents(defaultAccount?.id, { start: todayStart, end: todayEnd }, { enabled: !!defaultAccount?.id });
 	const sortedTodayEvents = [...todayEvents]
+		.filter((e) => new Date(e.end_at).getTime() > Date.now())
 		.sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime())
 		.slice(0, 3);
+	
+	const allEventsCount = todayEvents.length;
+	const pastEventsCount = allEventsCount - sortedTodayEvents.length;
 
 	const updateEmail = useUpdateEmail();
 	const markThreadRead = useMarkThreadRead();
@@ -435,13 +439,37 @@ export default function HomeRoute() {
 									<div className="flex items-center justify-center gap-2 text-sm font-medium text-kumo-default flex-wrap">
 										<span>{unreadCount} unread email{unreadCount !== 1 ? "s" : ""}</span>
 										<span className="text-kumo-subtle">&bull;</span>
-										<span>{todayEvents.length === 0 ? "No events today" : `${todayEvents.length} event${todayEvents.length !== 1 ? "s" : ""} today`}</span>
+										<span>{
+											allEventsCount === 0 ? "No events today" :
+											sortedTodayEvents.length === 0 ? "No more events today" :
+											`${sortedTodayEvents.length} event${sortedTodayEvents.length !== 1 ? "s" : ""} left today`
+										}</span>
 										<span className="text-kumo-subtle">&bull;</span>
 										<span>0 new notifications</span>
 									</div>
 								</div>
 								
 								<div className="flex flex-col gap-3">
+									{sortedTodayEvents.map((event) => (
+										<RouterLink
+											key={`event-${event.id}`}
+											to={`/mailbox/${defaultAccount.id}/calendar`}
+											className="group flex items-center gap-4 px-4 py-2.5 no-underline transition-colors hover:bg-kumo-tint rounded-xl border border-kumo-line bg-kumo-base/60 backdrop-blur shadow-sm"
+										>
+											<div className="flex-1 flex items-center min-w-0 gap-3">
+												<div className="text-sm font-semibold text-kumo-default shrink-0">
+													Event
+												</div>
+												<div className="text-sm truncate text-kumo-subtle">
+													{event.title}
+												</div>
+											</div>
+											<div className="text-xs text-kumo-subtle shrink-0 ml-4">
+												{new Date(event.start_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+											</div>
+										</RouterLink>
+									))}
+
 									{priorityEmails.length > 0 ? (
 										priorityEmails.map((email) => (
 											<RouterLink
@@ -469,26 +497,6 @@ export default function HomeRoute() {
 											<p className="text-sm text-kumo-subtle">No recent emails</p>
 										</div>
 									)}
-
-									{sortedTodayEvents.map((event) => (
-										<RouterLink
-											key={`event-${event.id}`}
-											to={`/mailbox/${defaultAccount.id}/calendar`}
-											className="group flex items-center gap-4 px-4 py-2.5 no-underline transition-colors hover:bg-kumo-tint rounded-xl border border-kumo-line bg-kumo-base/60 backdrop-blur shadow-sm"
-										>
-											<div className="flex-1 flex items-center min-w-0 gap-3">
-												<div className="text-sm font-semibold text-kumo-default shrink-0">
-													Event
-												</div>
-												<div className="text-sm truncate text-kumo-subtle">
-													{event.title}
-												</div>
-											</div>
-											<div className="text-xs text-kumo-subtle shrink-0 ml-4">
-												{new Date(event.start_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-											</div>
-										</RouterLink>
-									))}
 								</div>
 							</div>
 						)}
