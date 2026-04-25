@@ -120,6 +120,27 @@ export function addDays(d: Date, days: number): Date {
 	return date;
 }
 
+export function addMonths(d: Date, months: number): Date {
+	const date = new Date(d.valueOf());
+	date.setMonth(date.getMonth() + months);
+	return date;
+}
+
+export function startOfMonth(d: Date): Date {
+	const date = new Date(d);
+	date.setDate(1);
+	date.setHours(0, 0, 0, 0);
+	return date;
+}
+
+export function endOfMonth(d: Date): Date {
+	const date = new Date(d);
+	date.setMonth(date.getMonth() + 1);
+	date.setDate(0);
+	date.setHours(23, 59, 59, 999);
+	return date;
+}
+
 export function isSameDay(d1: Date, d2: Date): boolean {
 	return (
 		d1.getFullYear() === d2.getFullYear() &&

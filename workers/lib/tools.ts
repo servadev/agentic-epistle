@@ -634,6 +634,43 @@ export async function toolDeleteEvent(
 	}
 }
 
+export async function toolUpdateEvent(
+	env: Env,
+	mailboxId: string,
+	eventId: string,
+	params: {
+		title?: string;
+		start_at?: string;
+		end_at?: string;
+		description?: string;
+		location?: string;
+		all_day?: boolean;
+	},
+): Promise<unknown> {
+	if (params.start_at && params.end_at && new Date(params.start_at) >= new Date(params.end_at)) {
+		throw new Error('Start time must be before end time');
+	}
+
+	const ns = env.CALENDAR;
+	const id = ns.idFromName(mailboxId);
+	const stub = ns.get(id);
+
+	const updates: Record<string, unknown> = {};
+	if (params.title !== undefined) updates.title = params.title;
+	if (params.start_at !== undefined) updates.start_at = params.start_at;
+	if (params.end_at !== undefined) updates.end_at = params.end_at;
+	if (params.description !== undefined) updates.description = params.description;
+	if (params.location !== undefined) updates.location = params.location;
+	if (params.all_day !== undefined) updates.all_day = params.all_day ? 1 : 0;
+
+	const updatedEvent = await stub.updateEvent(eventId, updates);
+	if (updatedEvent) {
+		return updatedEvent;
+	} else {
+		return { error: `Event ${eventId} not found` };
+	}
+}
+
 // ── Contacts Tools ──────────────────────────────────────────────────
 
 export async function toolSearchContacts(

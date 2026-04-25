@@ -7,6 +7,9 @@ import type { CalendarEvent } from "~/types";
 import {
 	startOfWeek,
 	addDays,
+	addMonths,
+	startOfMonth,
+	endOfMonth,
 	isSameDay,
 	startOfDay,
 	endOfDay,
@@ -22,20 +25,43 @@ export default function CalendarRoute() {
 	const toastManager = useKumoToastManager();
 	
 	const [currentDate, setCurrentDate] = useState(new Date());
+	const [view, setView] = useState<'day' | 'week' | 'month'>('week');
 	const startDate = startOfWeek(currentDate); // Sunday
 	
-	// Query params for the week
-	const weekStartStr = startOfDay(startDate).toISOString();
-	const weekEndStr = endOfDay(addDays(startDate, 6)).toISOString();
+	// Query params for the visible range
+	let startStr = "";
+	let endStr = "";
+	
+	if (view === 'day') {
+		startStr = startOfDay(currentDate).toISOString();
+		endStr = endOfDay(currentDate).toISOString();
+	} else if (view === 'week') {
+		startStr = startOfDay(startDate).toISOString();
+		endStr = endOfDay(addDays(startDate, 6)).toISOString();
+	} else {
+		// month view - query the whole month plus padding weeks
+		const monthStart = startOfMonth(currentDate);
+		const monthEnd = endOfMonth(currentDate);
+		startStr = startOfDay(startOfWeek(monthStart)).toISOString();
+		endStr = endOfDay(addDays(startOfWeek(monthEnd), 6)).toISOString();
+	}
 
-	const { data: events = [], isLoading } = useEvents(mailboxId, { start: weekStartStr, end: weekEndStr });
+	const { data: events = [], isLoading } = useEvents(mailboxId, { start: startStr, end: endStr });
 	
 	const [isNewEventOpen, setIsNewEventOpen] = useState(false);
 	const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
 	const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
-	const nextWeek = () => setCurrentDate(addDays(currentDate, 7));
-	const prevWeek = () => setCurrentDate(addDays(currentDate, -7));
+	const nextRange = () => {
+		if (view === 'day') setCurrentDate(addDays(currentDate, 1));
+		else if (view === 'week') setCurrentDate(addDays(currentDate, 7));
+		else setCurrentDate(addMonths(currentDate, 1));
+	};
+	const prevRange = () => {
+		if (view === 'day') setCurrentDate(addDays(currentDate, -1));
+		else if (view === 'week') setCurrentDate(addDays(currentDate, -7));
+		else setCurrentDate(addMonths(currentDate, -1));
+	};
 	const today = () => setCurrentDate(new Date());
 
 	const createEventMutation = useCreateEvent();
@@ -88,7 +114,22 @@ export default function CalendarRoute() {
 	};
 
 	const hours = Array.from({ length: 24 }, (_, i) => i);
-	const days = Array.from({ length: 7 }, (_, i) => addDays(startDate, i));
+	let days: Date[] = [];
+	if (view === 'day') {
+		days = [currentDate];
+	} else if (view === 'week') {
+		days = Array.from({ length: 7 }, (_, i) => addDays(startDate, i));
+	} else {
+		const monthStart = startOfMonth(currentDate);
+		const monthEnd = endOfMonth(currentDate);
+		const calStart = startOfWeek(monthStart);
+		const calEnd = addDays(startOfWeek(monthEnd), 6);
+		let d = calStart;
+		while (d <= calEnd) {
+			days.push(d);
+			d = addDays(d, 1);
+		}
+	}
 
 	return (
 		<div className="flex h-full flex-col bg-kumo-base overflow-hidden">
@@ -97,12 +138,17 @@ export default function CalendarRoute() {
 				<div className="flex items-center gap-4">
 					<h1 className="text-lg font-semibold text-kumo-default">Calendar</h1>
 					<div className="flex items-center gap-1 bg-kumo-control rounded-md p-0.5">
-						<Button variant="ghost" size="sm" onClick={prevWeek} icon={<CaretLeftIcon size={16} />} aria-label="Previous Week" />
+						<Button variant="ghost" size="sm" onClick={prevRange} icon={<CaretLeftIcon size={16} />} aria-label="Previous" />
 						<Button variant="ghost" size="sm" onClick={today}>Today</Button>
-						<Button variant="ghost" size="sm" onClick={nextWeek} icon={<CaretRightIcon size={16} />} aria-label="Next Week" />
+						<Button variant="ghost" size="sm" onClick={nextRange} icon={<CaretRightIcon size={16} />} aria-label="Next" />
+					</div>
+					<div className="flex items-center gap-1 bg-kumo-control rounded-md p-0.5">
+						<Button variant="ghost" size="sm" onClick={() => setView('day')} className={view === 'day' ? 'bg-kumo-base shadow-sm' : ''}>Day</Button>
+						<Button variant="ghost" size="sm" onClick={() => setView('week')} className={view === 'week' ? 'bg-kumo-base shadow-sm' : ''}>Week</Button>
+						<Button variant="ghost" size="sm" onClick={() => setView('month')} className={view === 'month' ? 'bg-kumo-base shadow-sm' : ''}>Month</Button>
 					</div>
 					<span className="text-sm font-medium text-kumo-strong">
-						{formatMonthYear(startDate)}
+						{formatMonthYear(currentDate)}
 					</span>
 				</div>
 				<Button variant="primary" icon={<CalendarPlusIcon size={16} />} onClick={() => setIsNewEventOpen(true)}>
@@ -113,64 +159,104 @@ export default function CalendarRoute() {
 			{/* Main Grid */}
 			<div className="flex flex-1 min-h-0">
 				<div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
-					{/* Days Header */}
-					<div className="flex border-b border-kumo-line sticky top-0 bg-kumo-base z-10 shrink-0 ml-12">
-						{days.map((day, i) => (
-							<div key={i} className="flex-1 min-w-0 border-l border-kumo-line py-2 text-center">
-								<div className="text-xs text-kumo-subtle uppercase tracking-wider">{formatDayName(day)}</div>
-								<div className={`text-lg font-medium mt-0.5 ${isSameDay(day, new Date()) ? 'text-kumo-brand bg-kumo-brand/10 w-8 h-8 rounded-full flex items-center justify-center mx-auto' : 'text-kumo-default'}`}>
-									{formatDayNum(day)}
+					{view === 'month' ? (
+						<div className="flex flex-col h-full">
+							{/* Month Days Header */}
+							<div className="flex border-b border-kumo-line sticky top-0 bg-kumo-base z-10 shrink-0">
+								{Array.from({ length: 7 }, (_, i) => addDays(startDate, i)).map((day, i) => (
+									<div key={i} className="flex-1 min-w-0 border-l border-kumo-line py-2 text-center text-xs text-kumo-subtle uppercase tracking-wider">
+										{formatDayName(day)}
+									</div>
+								))}
+							</div>
+							
+							{/* Month Grid */}
+							<div className="flex-1 grid grid-cols-7 auto-rows-[minmax(100px,_1fr)]">
+								{days.map((day, dayIdx) => {
+									const isCurrentMonth = day.getMonth() === currentDate.getMonth();
+									return (
+										<div key={dayIdx} className={`border-l border-b border-kumo-line p-1 relative flex flex-col ${!isCurrentMonth ? 'bg-kumo-tint/50' : ''}`}>
+											<div className={`text-sm font-medium text-right mb-1 mr-1 ${isSameDay(day, new Date()) ? 'text-kumo-brand bg-kumo-brand/10 w-6 h-6 rounded-full flex items-center justify-center ml-auto' : isCurrentMonth ? 'text-kumo-default' : 'text-kumo-subtle'}`}>
+												{formatDayNum(day)}
+											</div>
+											<div className="flex-1 overflow-y-auto space-y-1">
+												{events.filter((e: CalendarEvent) => isSameDay(new Date(e.start_at), day)).map((event: CalendarEvent) => (
+													<div 
+														key={event.id}
+														onClick={() => setSelectedEvent(event)}
+														className="rounded bg-kumo-brand/20 border border-kumo-brand/30 hover:bg-kumo-brand/30 px-1 py-0.5 cursor-pointer transition-colors truncate text-[10px] text-kumo-brand font-medium"
+													>
+														{formatShortTime(new Date(event.start_at))} {event.title}
+													</div>
+												))}
+											</div>
+										</div>
+									);
+								})}
+							</div>
+						</div>
+					) : (
+						<>
+							{/* Days Header */}
+							<div className="flex border-b border-kumo-line sticky top-0 bg-kumo-base z-10 shrink-0 ml-12">
+								{days.map((day, i) => (
+									<div key={i} className="flex-1 min-w-0 border-l border-kumo-line py-2 text-center">
+										<div className="text-xs text-kumo-subtle uppercase tracking-wider">{formatDayName(day)}</div>
+										<div className={`text-lg font-medium mt-0.5 ${isSameDay(day, new Date()) ? 'text-kumo-brand bg-kumo-brand/10 w-8 h-8 rounded-full flex items-center justify-center mx-auto' : 'text-kumo-default'}`}>
+											{formatDayNum(day)}
+										</div>
+									</div>
+								))}
+							</div>
+
+							{/* Time Grid */}
+							<div className="flex flex-1 relative">
+								{/* Time labels */}
+								<div className="w-12 shrink-0 border-r border-kumo-line bg-kumo-base sticky left-0 z-10 flex flex-col">
+									{hours.map(hour => (
+										<div key={hour} className="h-16 border-b border-kumo-line flex items-start justify-center pt-1 text-xs text-kumo-subtle">
+											{hour === 0 ? "12 AM" : hour < 12 ? `${hour} AM` : hour === 12 ? "12 PM" : `${hour - 12} PM`}
+										</div>
+									))}
+								</div>
+
+								{/* Grid Cells & Events */}
+								<div className="flex-1 flex relative">
+									{days.map((day, dayIdx) => (
+										<div key={dayIdx} className="flex-1 border-r border-kumo-line relative min-w-[100px]">
+											{hours.map(hour => (
+												<div key={hour} className="h-16 border-b border-kumo-line" />
+											))}
+											
+											{/* Render Events for this day */}
+											{events.filter((e: CalendarEvent) => isSameDay(new Date(e.start_at), day)).map((event: CalendarEvent) => {
+												const start = new Date(event.start_at);
+												const end = new Date(event.end_at);
+												const top = start.getHours() * 64 + start.getMinutes() * (64 / 60);
+												const height = ((end.getTime() - start.getTime()) / (1000 * 60)) * (64 / 60);
+												
+												return (
+													<div 
+														key={event.id}
+														onClick={() => setSelectedEvent(event)}
+														className="absolute left-1 right-1 rounded bg-kumo-brand/20 border border-kumo-brand/30 hover:bg-kumo-brand/30 p-1 overflow-hidden cursor-pointer transition-colors z-10"
+														style={{ top: `${top}px`, height: `${Math.max(height, 24)}px` }}
+													>
+														<div className="text-xs font-semibold text-kumo-brand truncate leading-tight">{event.title}</div>
+														{height > 40 && (
+															<div className="text-[10px] text-kumo-brand/80 truncate">
+																{formatShortTime(start)} - {formatShortTime(end)}
+															</div>
+														)}
+													</div>
+												);
+											})}
+										</div>
+									))}
 								</div>
 							</div>
-						))}
-					</div>
-
-					{/* Time Grid */}
-					<div className="flex flex-1 relative">
-						{/* Time labels */}
-						<div className="w-12 shrink-0 border-r border-kumo-line bg-kumo-base sticky left-0 z-10 flex flex-col">
-							{hours.map(hour => (
-								<div key={hour} className="h-16 border-b border-kumo-line flex items-start justify-center pt-1 text-xs text-kumo-subtle">
-									{hour === 0 ? "12 AM" : hour < 12 ? `${hour} AM` : hour === 12 ? "12 PM" : `${hour - 12} PM`}
-								</div>
-							))}
-						</div>
-
-						{/* Grid Cells & Events */}
-						<div className="flex-1 flex relative">
-							{days.map((day, dayIdx) => (
-								<div key={dayIdx} className="flex-1 border-r border-kumo-line relative min-w-[100px]">
-									{hours.map(hour => (
-										<div key={hour} className="h-16 border-b border-kumo-line" />
-									))}
-									
-									{/* Render Events for this day */}
-									{events.filter((e: CalendarEvent) => isSameDay(new Date(e.start_at), day)).map((event: CalendarEvent) => {
-										const start = new Date(event.start_at);
-										const end = new Date(event.end_at);
-										const top = start.getHours() * 64 + start.getMinutes() * (64 / 60);
-										const height = ((end.getTime() - start.getTime()) / (1000 * 60)) * (64 / 60);
-										
-										return (
-											<div 
-												key={event.id}
-												onClick={() => setSelectedEvent(event)}
-												className="absolute left-1 right-1 rounded bg-kumo-brand/20 border border-kumo-brand/30 hover:bg-kumo-brand/30 p-1 overflow-hidden cursor-pointer transition-colors z-10"
-												style={{ top: `${top}px`, height: `${Math.max(height, 24)}px` }}
-											>
-												<div className="text-xs font-semibold text-kumo-brand truncate leading-tight">{event.title}</div>
-												{height > 40 && (
-													<div className="text-[10px] text-kumo-brand/80 truncate">
-														{formatShortTime(start)} - {formatShortTime(end)}
-													</div>
-												)}
-											</div>
-										);
-									})}
-								</div>
-							))}
-						</div>
-					</div>
+						</>
+					)}
 				</div>
 
 				{/* Side Panel for Event Details */}

@@ -32,6 +32,7 @@ import {
 	toolDiscardDraft,
 	toolListEvents,
 	toolCreateEvent,
+	toolUpdateEvent,
 	toolDeleteEvent,
 	toolSuggestEvent,
 	toolSearchContacts,
@@ -96,6 +97,7 @@ You have full access to manage the user's calendar. You can list, create, and de
 - Use list_events to check availability or see upcoming schedule
 - Use suggest_event to extract meeting details from emails and offer them to the user. ALWAYS use this instead of create_event when processing invites from emails, so the user can review them first.
 - Use create_event to schedule meetings or block time only when explicitly asked
+- Use update_event to modify existing calendar events
 - Use delete_event to cancel or remove events
 
 ## Contact Capabilities
@@ -309,6 +311,23 @@ function createEmailTools(env: Env, mailboxId: string) {
 			}),
 			execute: async ({ title, start_at, end_at, description, location, all_day }): Promise<unknown> => {
 				return toolCreateEvent(env, mailboxId, { title, start_at, end_at, description, location, all_day });
+			},
+		}),
+
+		update_event: defineTool({
+			description:
+				"Update an existing calendar event. Only provide the fields you want to update.",
+			parameters: z.object({
+				event_id: z.string().describe("The ID of the event to update"),
+				title: z.string().optional().describe("Title of the event"),
+				start_at: z.string().optional().describe("ISO string for the start time"),
+				end_at: z.string().optional().describe("ISO string for the end time"),
+				description: z.string().optional().describe("Optional description of the event"),
+				location: z.string().optional().describe("Optional location of the event"),
+				all_day: z.boolean().optional().describe("Optional boolean indicating if the event is all-day"),
+			}),
+			execute: async ({ event_id, title, start_at, end_at, description, location, all_day }): Promise<unknown> => {
+				return toolUpdateEvent(env, mailboxId, event_id, { title, start_at, end_at, description, location, all_day });
 			},
 		}),
 
