@@ -598,3 +598,40 @@ export async function toolDeleteEvent(
 		return { error: `Event ${eventId} not found` };
 	}
 }
+
+// ── Contacts Tools ──────────────────────────────────────────────────
+
+export async function toolSearchContacts(
+	env: Env,
+	mailboxId: string,
+	query: string
+): Promise<unknown> {
+	const ns = env.CONTACTS;
+	const id = ns.idFromName(mailboxId);
+	const stub = ns.get(id);
+
+	const allContacts = (await stub.getContacts()) as any[];
+	if (!query) return allContacts;
+
+	const lowerQuery = query.toLowerCase();
+	return allContacts.filter(c => 
+		(c.name && c.name.toLowerCase().includes(lowerQuery)) ||
+		(c.email && c.email.toLowerCase().includes(lowerQuery)) ||
+		(c.org && c.org.toLowerCase().includes(lowerQuery)) ||
+		(c.notes && c.notes.toLowerCase().includes(lowerQuery))
+	);
+}
+
+export async function toolGetContact(
+	env: Env,
+	mailboxId: string,
+	contactId: string
+): Promise<unknown> {
+	const ns = env.CONTACTS;
+	const id = ns.idFromName(mailboxId);
+	const stub = ns.get(id);
+
+	const contact = await stub.getContact(contactId);
+	if (!contact) return { error: "Contact not found" };
+	return contact;
+}

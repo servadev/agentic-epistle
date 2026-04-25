@@ -31,6 +31,8 @@ import {
 	toolListEvents,
 	toolCreateEvent,
 	toolDeleteEvent,
+	toolSearchContacts,
+	toolGetContact,
 } from "../lib/tools";
 import { Folders, FOLDER_TOOL_DESCRIPTION, MOVE_FOLDER_TOOL_DESCRIPTION } from "../../shared/folders";
 import type { Env } from "../types";
@@ -53,7 +55,7 @@ function defineTool(def: {
  * Default system prompt used when no custom prompt is configured for a mailbox.
  * Users can override this on a per-mailbox basis via the Settings UI.
  */
-const DEFAULT_SYSTEM_PROMPT = `You are an email and calendar assistant that helps manage this inbox and schedule. You read emails, draft replies, help organize conversations, and manage calendar events.
+const DEFAULT_SYSTEM_PROMPT = `You are an email, calendar, and contacts assistant that helps manage this inbox, schedule, and address book. You read emails, draft replies, help organize conversations, manage calendar events, and look up contacts.
 
 ## Writing Style
 Write like a real person. Short, direct, flowing prose. Get to the point. Plain text only - no HTML tags in your replies.
@@ -91,6 +93,9 @@ You have full access to manage the user's calendar. You can list, create, and de
 - Use list_events to check availability or see upcoming schedule
 - Use create_event to schedule meetings or block time
 - Use delete_event to cancel or remove events
+
+## Contact Capabilities
+- Use search_contacts to find people's email addresses, names, or organizations if asked "what is someone's email?".
 
 ## Draft Management
 Use discard_draft to delete drafts that the operator rejects or that are no longer needed.`;
@@ -311,6 +316,28 @@ function createEmailTools(env: Env, mailboxId: string) {
 			}),
 			execute: async ({ event_id }): Promise<unknown> => {
 				return toolDeleteEvent(env, mailboxId, event_id);
+			},
+		}),
+
+		search_contacts: defineTool({
+			description:
+				"Search the user's contacts. Leave the query empty to get all contacts. Use this to find a person's email address or organization details.",
+			parameters: z.object({
+				query: z.string().describe("The name, email, or organization to search for"),
+			}),
+			execute: async ({ query }): Promise<unknown> => {
+				return toolSearchContacts(env, mailboxId, query);
+			},
+		}),
+
+		get_contact: defineTool({
+			description:
+				"Get a single contact's full details by their contact ID.",
+			parameters: z.object({
+				contact_id: z.string().describe("The contact ID"),
+			}),
+			execute: async ({ contact_id }): Promise<unknown> => {
+				return toolGetContact(env, mailboxId, contact_id);
 			},
 		}),
 	};

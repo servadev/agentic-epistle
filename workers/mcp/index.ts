@@ -19,6 +19,8 @@ import {
 	toolSendEmail,
 	toolMarkEmailRead,
 	toolMoveEmail,
+	toolSearchContacts,
+	toolGetContact,
 } from "../lib/tools";
 import { Folders, FOLDER_TOOL_DESCRIPTION, MOVE_FOLDER_TOOL_DESCRIPTION } from "../../shared/folders";
 import type { Env } from "../types";
@@ -423,6 +425,44 @@ export class EmailMCP extends McpAgent<Env> {
 								text: JSON.stringify({ error: "Failed to move email" }),
 							},
 						],
+						isError: true,
+					};
+				}
+				return mcpText(result);
+			},
+		);
+
+		// ── search_contacts ────────────────────────────────────────
+		this.server.tool(
+			"search_contacts",
+			"Search the user's contacts. Leave the query empty to get all contacts. Use this to find a person's email address or organization details.",
+			{
+				mailboxId: z.string().describe("The mailbox email address"),
+				query: z.string().describe("The name, email, or organization to search for"),
+			},
+			async ({ mailboxId, query }) => {
+				const denied = await verifyMailbox(mailboxId);
+				if (denied) return denied;
+				const result = await toolSearchContacts(env, mailboxId, query);
+				return mcpText(result);
+			},
+		);
+
+		// ── get_contact ────────────────────────────────────────────
+		this.server.tool(
+			"get_contact",
+			"Get a single contact's full details by their contact ID.",
+			{
+				mailboxId: z.string().describe("The mailbox email address"),
+				contactId: z.string().describe("The contact ID"),
+			},
+			async ({ mailboxId, contactId }) => {
+				const denied = await verifyMailbox(mailboxId);
+				if (denied) return denied;
+				const result = await toolGetContact(env, mailboxId, contactId);
+				if (result && typeof result === "object" && "error" in result) {
+					return {
+						content: [{ type: "text" as const, text: result.error as string }],
 						isError: true,
 					};
 				}
