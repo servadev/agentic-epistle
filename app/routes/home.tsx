@@ -25,6 +25,8 @@ import {
 } from "~/queries/mailboxes";
 import { useFolders } from "~/queries/folders";
 import { useEmails, useUpdateEmail, useMarkThreadRead } from "~/queries/emails";
+import { useEvents } from "~/queries/calendar";
+import { startOfDay, endOfDay } from "shared/dates";
 import { Folders } from "shared/folders";
 import { queryKeys } from "~/queries/keys";
 import { useUIStore } from "~/hooks/useUIStore";
@@ -288,6 +290,10 @@ export default function HomeRoute() {
 	const unreadRecent = recentEmails.filter(e => !e.read);
 	const priorityEmails = (unreadRecent.length > 0 ? unreadRecent : recentEmails).slice(0, 3);
 
+	const todayStart = startOfDay(new Date()).toISOString();
+	const todayEnd = endOfDay(new Date()).toISOString();
+	const { data: todayEvents = [] } = useEvents(defaultAccount?.id, { start: todayStart, end: todayEnd }, { enabled: !!defaultAccount?.id });
+
 	const updateEmail = useUpdateEmail();
 	const markThreadRead = useMarkThreadRead();
 	const { selectEmail, startCompose } = useUIStore();
@@ -395,11 +401,11 @@ export default function HomeRoute() {
 						<h1 className="text-4xl md:text-5xl font-bold text-kumo-default mb-4">
 							Good Morning!
 						</h1>
-						<h2 className="text-xl md:text-2xl text-kumo-subtle mb-10">
-							{accounts.length > 0 
-								? "Let's check your Inbox" 
-								: "Let's get started by creating an Inbox"}
-						</h2>
+						{accounts.length === 0 && (
+							<h2 className="text-xl md:text-2xl text-kumo-subtle mb-10">
+								Let's get started by creating an Inbox
+							</h2>
+						)}
 						
 						{accounts.length > 0 ? (
 							defaultAccount && (
@@ -426,9 +432,9 @@ export default function HomeRoute() {
 									<div className="flex items-center justify-center gap-2 text-sm font-medium text-kumo-default flex-wrap">
 										<span>{unreadCount} unread email{unreadCount !== 1 ? "s" : ""}</span>
 										<span className="text-kumo-subtle">&bull;</span>
-										<span>2 new events</span>
+										<span>{todayEvents.length === 0 ? "No events today" : `${todayEvents.length} event${todayEvents.length !== 1 ? "s" : ""} today`}</span>
 										<span className="text-kumo-subtle">&bull;</span>
-										<span>3 new notifications</span>
+										<span>0 new notifications</span>
 									</div>
 								</div>
 								
