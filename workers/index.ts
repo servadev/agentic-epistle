@@ -507,6 +507,49 @@ app.get("/api/v1/mailboxes/:mailboxId/contacts/:id", async (c) => {
 	return c.json({ contact });
 });
 
+app.get("/api/v1/mailboxes/:mailboxId/contacts/:id/avatar", async (c) => {
+	const mailboxId = c.req.param("mailboxId");
+	const contactId = c.req.param("id");
+	const obj = await c.env.BUCKET.get(`avatars/${mailboxId}/${contactId}`);
+	if (!obj) return c.json({ error: "Avatar not found" }, 404);
+	const headers = new Headers();
+	headers.set("Content-Type", obj.httpMetadata?.contentType || "image/jpeg");
+	headers.set("Cache-Control", "public, max-age=31536000");
+	return new Response(obj.body, { headers });
+});
+
+app.put("/api/v1/mailboxes/:mailboxId/contacts/:id/avatar", async (c) => {
+	const mailboxId = c.req.param("mailboxId");
+	const contactId = c.req.param("id");
+	const body = await c.req.parseBody();
+	const file = body["avatar"];
+	
+	if (!(file instanceof File)) {
+		return c.json({ error: "Invalid file" }, 400);
+	}
+	
+	// Enforce 5MB limit
+	if (file.size > 5 * 1024 * 1024) {
+		return c.json({ error: "File size exceeds 5MB limit" }, 400);
+	}
+	
+	const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+	if (!allowedTypes.includes(file.type)) {
+		return c.json({ error: "Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed." }, 400);
+	}
+	
+	await c.env.BUCKET.put(`avatars/${mailboxId}/${contactId}`, file.stream(), {
+		httpMetadata: { contentType: file.type }
+	});
+	
+	const avatar_url = `/api/v1/mailboxes/${mailboxId}/contacts/${contactId}/avatar?t=${Date.now()}`;
+	
+	const stub = c.get("contactsStub");
+	const contact = await stub.updateContact(contactId, { avatar_url, updated_at: new Date().toISOString() });
+	
+	return c.json({ avatar_url, contact });
+});
+
 app.post("/api/v1/mailboxes/:mailboxId/contacts", async (c) => {
 	const body = await c.req.json();
 	const stub = c.get("contactsStub");
