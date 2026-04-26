@@ -51,27 +51,29 @@ export function ContactSelector({ mailboxId, selectedContacts, onChange }: Conta
 
 	return (
 		<div className="space-y-2 w-full" ref={wrapperRef}>
-			<label className="block text-sm font-medium text-kumo-default">Contacts</label>
+			<label className="block text-sm font-medium text-kumo-default">Attendees</label>
 			
-			<div className="flex flex-wrap gap-2 mb-2">
-				{selectedContactObjects.map(contact => (
-					<div key={contact.id} className="flex items-center gap-1.5 bg-kumo-tint rounded-full py-1 pl-1 pr-2 border border-kumo-line text-sm">
-						{contact.avatar_url ? (
-							<img src={contact.avatar_url} alt="" className="w-5 h-5 rounded-full" />
-						) : (
-							<UserCircleIcon className="w-5 h-5 text-kumo-subtle" weight="fill" />
-						)}
-						<span className="font-medium text-kumo-strong">{contact.name}</span>
-						<button 
-							type="button" 
-							onClick={() => handleRemove(contact.id)}
-							className="text-kumo-subtle hover:text-kumo-strong rounded-full p-0.5"
-						>
-							<XIcon size={12} weight="bold" />
-						</button>
-					</div>
-				))}
-			</div>
+			{selectedContactObjects.length > 0 && (
+				<div className="flex flex-wrap gap-2 mb-2 max-h-32 overflow-y-auto pr-1">
+					{selectedContactObjects.map(contact => (
+						<div key={contact.id} className="flex items-center gap-1.5 bg-kumo-tint rounded-full py-1 pl-1 pr-2 border border-kumo-line text-sm max-w-full">
+							{contact.avatar_url ? (
+								<img src={contact.avatar_url} alt="" className="w-5 h-5 rounded-full shrink-0" />
+							) : (
+								<UserCircleIcon className="w-5 h-5 text-kumo-subtle shrink-0" weight="fill" />
+							)}
+							<span className="font-medium text-kumo-strong truncate">{contact.name}</span>
+							<button 
+								type="button" 
+								onClick={() => handleRemove(contact.id)}
+								className="text-kumo-subtle hover:text-kumo-strong rounded-full p-0.5 shrink-0"
+							>
+								<XIcon size={12} weight="bold" />
+							</button>
+						</div>
+					))}
+				</div>
+			)}
 
 			<div className="relative">
 				<input

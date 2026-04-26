@@ -216,6 +216,7 @@ export default function CalendarRoute() {
 					start_at: new Date(editEvent.start_at).toISOString(),
 					end_at: new Date(editEvent.end_at).toISOString(),
 					description: editEvent.description,
+					contacts: editEvent.contacts,
 				}
 			});
 			setIsEditEventOpen(false);
@@ -293,20 +294,25 @@ export default function CalendarRoute() {
 									</div>
 									{event.contacts && event.contacts.length > 0 && (
 										<div className="mt-3 flex flex-wrap gap-1.5">
-											{event.contacts.map((contactId: string) => {
+											{event.contacts.slice(0, 3).map((contactId: string) => {
 												const contact = contactsMap.get(contactId);
 												if (!contact) return null;
 												return (
 													<div key={contact.id} className="flex items-center gap-1 bg-kumo-tint rounded-full py-0.5 pl-0.5 pr-2 border border-kumo-line">
 														{contact.avatar_url ? (
-															<img src={contact.avatar_url} alt="" className="w-4 h-4 rounded-full" />
+															<img src={contact.avatar_url} alt="" className="w-4 h-4 rounded-full shrink-0" />
 														) : (
-															<UserCircleIcon className="w-4 h-4 text-kumo-subtle" weight="fill" />
+															<UserCircleIcon className="w-4 h-4 text-kumo-subtle shrink-0" weight="fill" />
 														)}
 														<span className="text-[10px] font-medium text-kumo-strong truncate max-w-[100px]">{contact.name}</span>
 													</div>
 												);
 											})}
+											{event.contacts.length > 3 && (
+												<div className="flex items-center justify-center bg-kumo-tint rounded-full px-2 py-0.5 border border-kumo-line">
+													<span className="text-[10px] font-medium text-kumo-strong">+{event.contacts.length - 3}</span>
+												</div>
+											)}
 										</div>
 									)}
 								</div>
@@ -488,6 +494,30 @@ export default function CalendarRoute() {
 											<p className="text-sm text-kumo-default whitespace-pre-wrap leading-relaxed">{selectedEvent.description}</p>
 										</div>
 									)}
+									{selectedEvent.contacts && selectedEvent.contacts.length > 0 && (
+										<div className="pt-6 border-t border-kumo-line">
+											<h4 className="text-xs font-bold text-kumo-strong uppercase tracking-wider mb-3">Attendees</h4>
+											<div className="flex flex-col gap-3">
+												{selectedEvent.contacts.map((contactId: string) => {
+													const contact = contactsMap.get(contactId);
+													if (!contact) return null;
+													return (
+														<div key={contact.id} className="flex items-center gap-3">
+															{contact.avatar_url ? (
+																<img src={contact.avatar_url} alt="" className="w-8 h-8 rounded-full shrink-0" />
+															) : (
+																<UserCircleIcon className="w-8 h-8 text-kumo-subtle shrink-0" weight="fill" />
+															)}
+															<div className="flex flex-col min-w-0">
+																<span className="text-sm font-medium text-kumo-strong truncate">{contact.name}</span>
+																<span className="text-xs text-kumo-subtle truncate">{contact.email}</span>
+															</div>
+														</div>
+													);
+												})}
+											</div>
+										</div>
+									)}
 								</div>
 							</div>
 						</div>
@@ -519,7 +549,7 @@ export default function CalendarRoute() {
 			{isNewEventOpen && (
 				<div className="fixed inset-0 z-[100] flex items-center justify-center p-4" aria-labelledby="modal-title" role="dialog" aria-modal="true">
 					<div className="absolute inset-0 bg-black/30 transition-opacity" onClick={() => setIsNewEventOpen(false)} />
-					<div className="relative bg-white rounded-lg shadow-xl w-full max-w-md pointer-events-auto animate-in fade-in zoom-in-95 duration-200">
+					<div className="relative bg-white rounded-lg shadow-xl w-full max-w-lg pointer-events-auto animate-in fade-in zoom-in-95 duration-200">
 						<div className="p-4 border-b border-kumo-line flex items-center justify-between">
 							<h2 className="font-semibold text-kumo-default">New Event</h2>
 							<Button variant="ghost" size="sm" shape="square" icon={<XIcon />} onClick={() => setIsNewEventOpen(false)} aria-label="Close" />
@@ -580,7 +610,7 @@ export default function CalendarRoute() {
 			{isEditEventOpen && (
 				<div className="fixed inset-0 z-[100] flex items-center justify-center p-4" aria-labelledby="modal-title" role="dialog" aria-modal="true">
 					<div className="absolute inset-0 bg-black/30 transition-opacity" onClick={() => setIsEditEventOpen(false)} />
-					<div className="relative bg-white rounded-lg shadow-xl w-full max-w-md pointer-events-auto animate-in fade-in zoom-in-95 duration-200">
+					<div className="relative bg-white rounded-lg shadow-xl w-full max-w-lg pointer-events-auto animate-in fade-in zoom-in-95 duration-200">
 						<div className="p-4 border-b border-kumo-line flex items-center justify-between">
 							<h2 className="font-semibold text-kumo-default">Edit Event</h2>
 							<Button variant="ghost" size="sm" shape="square" icon={<XIcon />} onClick={() => setIsEditEventOpen(false)} aria-label="Close" />

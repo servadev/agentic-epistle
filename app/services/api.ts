@@ -176,7 +176,7 @@ const api = {
 	createEvent: (mailboxId: string, event: unknown) =>
 		post<CalendarEvent>(`/api/v1/mailboxes/${mailboxId}/calendar/events`, event),
 	updateEvent: (mailboxId: string, id: string, event: unknown) =>
-		put<CalendarEvent>(`/api/v1/mailboxes/${mailboxId}/calendar/events/${id}`, event),
+		patch<CalendarEvent>(`/api/v1/mailboxes/${mailboxId}/calendar/events/${id}`, event),
 	deleteEvent: (mailboxId: string, id: string) =>
 		del<void>(`/api/v1/mailboxes/${mailboxId}/calendar/events/${id}`),
 	// Contacts
