@@ -295,10 +295,24 @@ export default function EmailListRoute() {
 		if (email.participants) {
 			const names = email.participants
 				.split(",")
-				.map((p) => p.trim().split("@")[0])
+				.map((p) => {
+					const trimmed = p.trim();
+					// Extract name if format is "Name" <email@domain.com>
+					const match = trimmed.match(/^"?(.*?)"?\s*<.*>$/);
+					if (match && match[1]) {
+						return match[1].trim();
+					}
+					return trimmed.split("@")[0];
+				})
 				.filter((name, idx, arr) => arr.indexOf(name) === idx);
 			if (names.length <= 3) return names.join(", ");
 			return `${names.slice(0, 2).join(", ")} +${names.length - 2}`;
+		}
+		
+		// Fallback for sender if participants is empty
+		const senderMatch = email.sender.match(/^"?(.*?)"?\s*<.*>$/);
+		if (senderMatch && senderMatch[1]) {
+			return senderMatch[1].trim();
 		}
 		return email.sender.split("@")[0];
 	};
@@ -386,34 +400,24 @@ export default function EmailListRoute() {
 												}}
 												className={`group relative flex items-start gap-3 w-full text-left cursor-pointer transition-colors border-b border-slate-200 py-3 md:py-4 ${
 													isSelected 
-														? `bg-indigo-50 border-l-4 border-l-indigo-600 pl-3 pr-4 md:pl-5 md:pr-6 ${isPanelOpen ? "md:pr-4 md:pl-3" : ""}`
-														: `bg-white hover:bg-slate-50 px-4 md:px-6 ${isPanelOpen ? "md:px-4" : ""}`
+														? `bg-indigo-50 border-l-4 border-l-indigo-600 pl-3 pr-4 md:pl-4 md:pr-6 ${isPanelOpen ? "md:pr-4 md:pl-3" : ""}`
+														: `bg-white hover:bg-slate-50 px-4 md:px-5 ${isPanelOpen ? "md:px-4" : ""}`
 												}`}
 											>
-												{/* Unread dot */}
-												<div className="w-2.5 pt-2 shrink-0 flex justify-center">
-													{hasUnread(email) && (
-														<div className="h-2 w-2 rounded-full bg-teal-500" />
-													)}
-												</div>
+												{/* Unread dot - Absolute positioned to save space */}
+												{hasUnread(email) && (
+													<div className="absolute left-1 top-5 h-2 w-2 rounded-full bg-teal-500" />
+												)}
 
 												{/* Avatar */}
-												<div className="pt-0.5 shrink-0">
-													<div className="h-10 w-10 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-lg font-bold">
+												<div className="pt-0.5 shrink-0 pl-1">
+													<div className="h-10 w-10 rounded-lg bg-slate-200 text-slate-600 flex items-center justify-center text-lg font-bold shadow-sm">
 														{formatParticipants(email).charAt(0).toUpperCase()}
 													</div>
 												</div>
 
 												{/* Content */}
 												<div className="min-w-0 flex-1 flex flex-col gap-0.5">
-													{/* Topic tag pills placeholder - if data had tags, render here */}
-													<div className="flex gap-2 mb-1">
-														<span className="inline-flex items-center gap-1.5 rounded-md bg-white px-2 py-0.5 text-[10px] font-bold text-slate-600 ring-1 ring-inset ring-slate-200 shadow-sm uppercase tracking-wider">
-															<span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
-															Design
-														</span>
-													</div>
-
 													<div className="flex items-center justify-between gap-2">
 														<span
 															className={`truncate text-sm ${hasUnread(email) ? "font-bold text-slate-900" : "font-medium text-slate-700"}`}
@@ -447,7 +451,7 @@ export default function EmailListRoute() {
 													
 													<div className="flex items-center gap-1.5">
 														<span
-															className={`truncate text-sm ${hasUnread(email) ? "font-bold text-slate-900" : "font-semibold text-slate-800"}`}
+															className={`truncate text-base ${hasUnread(email) ? "font-bold text-slate-900" : "font-semibold text-slate-800"}`}
 														>
 															{email.subject}
 														</span>
@@ -463,8 +467,17 @@ export default function EmailListRoute() {
 														)}
 													</div>
 
-													<div className="text-sm text-slate-500 line-clamp-2 leading-relaxed mt-0.5">
-														{snippet || <span className="italic text-slate-400">No content</span>}
+													<div className="flex items-end justify-between gap-3 mt-0.5">
+														<div className="text-sm text-slate-500 line-clamp-2 leading-relaxed flex-1">
+															{snippet || <span className="italic text-slate-400">No content</span>}
+														</div>
+														{/* Topic tag pills placeholder */}
+														<div className="shrink-0 mb-0.5">
+															<span className="inline-flex items-center gap-1.5 rounded-md bg-white px-2 py-0.5 text-[10px] font-bold text-slate-600 ring-1 ring-inset ring-slate-200 shadow-sm uppercase tracking-wider">
+																<span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
+																Design
+															</span>
+														</div>
 													</div>
 												</div>
 
