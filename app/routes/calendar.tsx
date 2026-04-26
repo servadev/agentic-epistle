@@ -23,6 +23,16 @@ import {
 	formatDateTime,
 } from "shared/dates";
 
+const CATEGORIES = [
+	{ id: 'Meeting', label: 'Meeting', color: 'bg-blue-500', bg: 'bg-blue-100', text: 'text-blue-900', border: 'border-blue-200' },
+	{ id: 'Call', label: 'Call', color: 'bg-green-500', bg: 'bg-green-100', text: 'text-green-900', border: 'border-green-200' },
+	{ id: 'Appointment', label: 'Appointment', color: 'bg-purple-500', bg: 'bg-purple-100', text: 'text-purple-900', border: 'border-purple-200' },
+	{ id: 'Deadline', label: 'Deadline', color: 'bg-red-500', bg: 'bg-red-100', text: 'text-red-900', border: 'border-red-200' },
+	{ id: 'Reminder', label: 'Reminder', color: 'bg-yellow-500', bg: 'bg-yellow-100', text: 'text-yellow-900', border: 'border-yellow-200' },
+	{ id: 'Travel', label: 'Travel', color: 'bg-orange-500', bg: 'bg-orange-100', text: 'text-orange-900', border: 'border-orange-200' },
+	{ id: 'Social', label: 'Social', color: 'bg-pink-500', bg: 'bg-pink-100', text: 'text-pink-900', border: 'border-pink-200' },
+];
+
 function EventMenu({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void }) {
 	const [open, setOpen] = useState(false);
 	const ref = useRef<HTMLDivElement>(null);
@@ -143,8 +153,9 @@ export default function CalendarRoute() {
 		start_at: string;
 		end_at: string;
 		description: string;
+		category: string;
 		contacts: string[];
-	}>({ title: "", start_at: "", end_at: "", description: "", contacts: [] });
+	}>({ title: "", start_at: "", end_at: "", description: "", category: "Meeting", contacts: [] });
 	const [isEditEventOpen, setIsEditEventOpen] = useState(false);
 	const [editEvent, setEditEvent] = useState<CalendarEvent | null>(null);
 
@@ -172,7 +183,7 @@ export default function CalendarRoute() {
 				}
 			});
 			setIsNewEventOpen(false);
-			setNewEvent({ title: "", start_at: "", end_at: "", description: "", contacts: [] });
+			setNewEvent({ title: "", start_at: "", end_at: "", description: "", category: "Meeting", contacts: [] });
 			toastManager.add({ title: "Event created successfully!" });
 		} catch (err) {
 			const message = (err instanceof Error ? err.message : null) || "Failed to create event.";
@@ -216,6 +227,7 @@ export default function CalendarRoute() {
 					start_at: new Date(editEvent.start_at).toISOString(),
 					end_at: new Date(editEvent.end_at).toISOString(),
 					description: editEvent.description,
+					category: editEvent.category,
 					contacts: editEvent.contacts,
 				}
 			});
@@ -263,14 +275,19 @@ export default function CalendarRoute() {
 						events
 							.slice()
 							.sort((a: CalendarEvent, b: CalendarEvent) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime())
-							.map((event: CalendarEvent) => (
+							.map((event: CalendarEvent) => {
+								const isPassed = new Date(event.end_at) < new Date();
+								return (
 								<div 
 									key={event.id}
 									onClick={() => setSelectedEvent(event)}
-									className="p-3 rounded-lg border border-kumo-line bg-kumo-base hover:bg-kumo-tint cursor-pointer transition-colors"
+									className={`p-3 rounded-lg border border-kumo-line bg-kumo-base hover:bg-kumo-tint cursor-pointer transition-colors ${isPassed ? 'opacity-50 grayscale' : ''}`}
 								>
 									<div className="flex items-start justify-between gap-2">
-										<div className="text-sm font-semibold text-kumo-default truncate pt-1">{event.title}</div>
+										<div className="text-sm font-semibold text-kumo-default truncate pt-1 flex items-center gap-2">
+											<div className={`w-2.5 h-2.5 rounded-full ${CATEGORIES.find(c => c.id === (event.category || 'Meeting'))?.color || CATEGORIES[0].color}`} />
+											{event.title}
+										</div>
 										<EventMenu 
 											onEdit={() => {
 												setEditEvent({ ...event, contacts: event.contacts || [] });
@@ -288,7 +305,7 @@ export default function CalendarRoute() {
 									</div>
 									<div className="text-xs text-kumo-subtle mt-1 flex items-center gap-1.5">
 										<div className="w-[14px] flex justify-center">
-											<div className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
+											<div className={`h-1.5 w-1.5 rounded-full ${CATEGORIES.find(c => c.id === (event.category || 'Meeting'))?.color || CATEGORIES[0].color}`} />
 										</div>
 										<span>{new Date(event.start_at).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
 									</div>
@@ -316,7 +333,8 @@ export default function CalendarRoute() {
 										</div>
 									)}
 								</div>
-							))
+							);
+						})
 					)}
 				</div>
 			</div>
@@ -369,15 +387,18 @@ export default function CalendarRoute() {
 												{formatDayNum(day)}
 											</div>
 											<div className="flex-1 overflow-y-auto space-y-1">
-												{events.filter((e: CalendarEvent) => isSameDay(new Date(e.start_at), day)).map((event: CalendarEvent) => (
+												{events.filter((e: CalendarEvent) => isSameDay(new Date(e.start_at), day)).map((event: CalendarEvent) => {
+													const category = CATEGORIES.find(c => c.id === (event.category || 'Meeting')) || CATEGORIES[0];
+													return (
 													<div 
 														key={event.id}
 														onClick={() => setSelectedEvent(event)}
-														className="rounded bg-kumo-brand/20 border border-kumo-brand/30 hover:bg-kumo-brand/30 px-1 py-0.5 cursor-pointer transition-colors truncate text-[10px] text-kumo-brand font-medium"
+														className={`rounded border ${category.bg} ${category.border} hover:opacity-80 px-1 py-0.5 cursor-pointer transition-colors truncate text-[10px] text-slate-900 font-medium`}
 													>
 														{formatShortTime(new Date(event.start_at))} {event.title}
 													</div>
-												))}
+													);
+												})}
 											</div>
 										</div>
 									);
@@ -423,17 +444,18 @@ export default function CalendarRoute() {
 												const end = new Date(event.end_at);
 												const top = start.getHours() * 64 + start.getMinutes() * (64 / 60);
 												const height = ((end.getTime() - start.getTime()) / (1000 * 60)) * (64 / 60);
+												const category = CATEGORIES.find(c => c.id === (event.category || 'Meeting')) || CATEGORIES[0];
 												
 												return (
 													<div 
 														key={event.id}
 														onClick={() => setSelectedEvent(event)}
-														className="absolute left-1 right-1 rounded bg-kumo-brand/20 border border-kumo-brand/30 hover:bg-kumo-brand/30 p-1 overflow-hidden cursor-pointer transition-colors z-10"
+														className={`absolute left-1 right-1 rounded border ${category.bg} ${category.border} hover:opacity-80 p-1 overflow-hidden cursor-pointer transition-colors z-10`}
 														style={{ top: `${top}px`, height: `${Math.max(height, 24)}px` }}
 													>
-														<div className="text-xs font-semibold text-kumo-brand truncate leading-tight">{event.title}</div>
+														<div className="text-xs font-semibold text-slate-900 truncate leading-tight">{event.title}</div>
 														{height > 40 && (
-															<div className="text-[10px] text-kumo-brand/80 truncate">
+															<div className="text-[10px] text-slate-700 truncate">
 																{formatShortTime(start)} - {formatShortTime(end)}
 															</div>
 														)}
@@ -467,7 +489,17 @@ export default function CalendarRoute() {
 								<div className="p-6 space-y-6 flex-1">
 									<div>
 										<div className="flex items-start justify-between gap-4">
-											<h3 className="text-2xl font-bold text-kumo-default tracking-tight break-words">{selectedEvent.title}</h3>
+											<div className="flex flex-col gap-2 items-start">
+												{new Date(selectedEvent.end_at) < new Date() && (
+													<span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-800 border border-slate-200">
+														Finished
+													</span>
+												)}
+												<div className="flex items-center gap-2">
+													<div className={`w-3 h-3 rounded-full ${CATEGORIES.find(c => c.id === (selectedEvent.category || 'Meeting'))?.color || CATEGORIES[0].color}`} />
+													<h3 className="text-2xl font-bold text-kumo-default tracking-tight break-words">{selectedEvent.title}</h3>
+												</div>
+											</div>
 											<EventMenu 
 												onEdit={() => {
 													setEditEvent({...selectedEvent, contacts: selectedEvent.contacts || []});
@@ -582,6 +614,18 @@ export default function CalendarRoute() {
 								</div>
 							</div>
 							<div>
+								<label className="block text-sm font-medium text-kumo-default mb-1">Category</label>
+								<select
+									className="w-full rounded-md border border-kumo-line bg-kumo-base px-3 py-2 text-sm text-kumo-default focus:border-kumo-brand focus:outline-none focus:ring-1 focus:ring-kumo-brand"
+									value={newEvent.category}
+									onChange={e => setNewEvent({...newEvent, category: e.target.value})}
+								>
+									{CATEGORIES.map(c => (
+										<option key={c.id} value={c.id}>{c.label}</option>
+									))}
+								</select>
+							</div>
+							<div>
 								<label className="block text-sm font-medium text-kumo-default mb-1">Description</label>
 								<textarea 
 									className="w-full rounded-md border border-kumo-line bg-kumo-base px-3 py-2 text-sm text-kumo-default focus:border-kumo-brand focus:outline-none focus:ring-1 focus:ring-kumo-brand resize-none"
@@ -642,6 +686,18 @@ export default function CalendarRoute() {
 											onChange={(e) => setEditEvent({...editEvent, end_at: e.target.value})} 
 										/>
 									</div>
+								</div>
+								<div>
+									<label className="block text-sm font-medium text-kumo-default mb-1">Category</label>
+									<select
+										className="w-full rounded-md border border-kumo-line bg-kumo-base px-3 py-2 text-sm text-kumo-default focus:border-kumo-brand focus:outline-none focus:ring-1 focus:ring-kumo-brand"
+										value={editEvent.category || "Meeting"}
+										onChange={e => setEditEvent({...editEvent, category: e.target.value})}
+									>
+										{CATEGORIES.map(c => (
+											<option key={c.id} value={c.id}>{c.label}</option>
+										))}
+									</select>
 								</div>
 								<div>
 									<label className="block text-sm font-medium text-kumo-default mb-1">Description</label>

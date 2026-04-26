@@ -82,6 +82,7 @@ export interface CalendarEvent {
 	description?: string | null;
 	location?: string | null;
 	source?: string | null;
+	category?: string | null;
 	contacts?: string[] | null;
 }
 

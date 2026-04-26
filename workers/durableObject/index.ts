@@ -938,6 +938,7 @@ export interface EventData {
 	description?: string | null;
 	location?: string | null;
 	source?: string | null;
+	category?: string | null;
 	contacts?: string[] | null;
 }
 
@@ -981,6 +982,7 @@ export class CalendarDO extends DurableObject<Env> {
 			description: event.description ?? null,
 			location: event.location ?? null,
 			source: event.source ?? null,
+			category: event.category ?? null,
 			contacts: event.contacts ?? null,
 		};
 		this.db.insert(schema.events).values(newEvent).run();
@@ -993,8 +995,8 @@ export class CalendarDO extends DurableObject<Env> {
 	}
 
 	async deleteEvent(id: string): Promise<boolean> {
-		const result = this.db.delete(schema.events).where(eq(schema.events.id, id)).run();
-		return result.meta.changes > 0;
+		this.db.delete(schema.events).where(eq(schema.events.id, id)).run();
+		return true;
 	}
 }
 

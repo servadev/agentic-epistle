@@ -194,6 +194,10 @@ export const calendarMigrations: Migration[] = [
 		name: "2_add_contacts_to_events",
 		sql: txn(`ALTER TABLE events ADD COLUMN contacts TEXT;`),
 	},
+	{
+		name: "3_add_category_to_events",
+		sql: txn(`ALTER TABLE events ADD COLUMN category TEXT;`),
+	},
 ];
 
 export const contactMigrations: Migration[] = [

@@ -333,6 +333,7 @@ app.post("/api/v1/mailboxes/:mailboxId/calendar/events", async (c: AppContext) =
 		description: body.description,
 		location: body.location,
 		source: body.source || "manual",
+		category: body.category || null,
 		contacts: body.contacts || null,
 	};
 	if (!event.title || !event.start_at || !event.end_at) {
@@ -353,6 +354,7 @@ app.patch("/api/v1/mailboxes/:mailboxId/calendar/events/:eventId", async (c: App
 	if (body.description !== undefined) updates.description = body.description;
 	if (body.location !== undefined) updates.location = body.location;
 	if (body.source !== undefined) updates.source = body.source;
+	if (body.category !== undefined) updates.category = body.category;
 	if (body.contacts !== undefined) updates.contacts = body.contacts;
 
 	const updated = await c.var.calendarStub.updateEvent(eventId, updates);
