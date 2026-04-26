@@ -25,7 +25,7 @@ export default function CalendarRoute() {
 	const toastManager = useKumoToastManager();
 	
 	const [currentDate, setCurrentDate] = useState(new Date());
-	const [view, setView] = useState<'day' | 'week' | 'month'>('week');
+	const [view, setView] = useState<'day' | 'week' | 'month'>('month');
 	const startDate = startOfWeek(currentDate); // Sunday
 	
 	// Query params for the visible range
@@ -132,9 +132,46 @@ export default function CalendarRoute() {
 	}
 
 	return (
-		<div className="flex h-full flex-col bg-kumo-base overflow-hidden">
-			{/* Header */}
-			<div className="flex items-center justify-between px-4 py-3 border-b border-kumo-line shrink-0">
+		<div className="flex h-full overflow-hidden bg-kumo-base relative">
+			{/* Column 2: Agenda List */}
+			<div className="hidden lg:flex flex-col w-[350px] shrink-0 border-r border-kumo-line bg-white z-10">
+				<div className="px-4 py-3.5 border-b border-kumo-line shrink-0 flex items-center justify-between">
+					<h1 className="text-lg font-bold text-slate-900 tracking-tight">Agenda</h1>
+				</div>
+				<div className="flex-1 overflow-y-auto p-4 space-y-3">
+					{events.length === 0 ? (
+						<div className="text-sm text-kumo-subtle text-center py-4">No upcoming events</div>
+					) : (
+						events
+							.slice()
+							.sort((a: CalendarEvent, b: CalendarEvent) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime())
+							.map((event: CalendarEvent) => (
+								<div 
+									key={event.id}
+									onClick={() => setSelectedEvent(event)}
+									className="p-3 rounded-lg border border-kumo-line bg-kumo-base hover:bg-kumo-tint cursor-pointer transition-colors"
+								>
+									<div className="text-sm font-semibold text-kumo-default truncate">{event.title}</div>
+									<div className="text-xs text-kumo-subtle mt-1.5 flex items-center gap-1.5">
+										<ClockIcon size={14} />
+										<span>{formatShortTime(new Date(event.start_at))} - {formatShortTime(new Date(event.end_at))}</span>
+									</div>
+									<div className="text-xs text-kumo-subtle mt-1 flex items-center gap-1.5">
+										<div className="w-[14px] flex justify-center">
+											<div className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
+										</div>
+										<span>{new Date(event.start_at).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+									</div>
+								</div>
+							))
+					)}
+				</div>
+			</div>
+
+			{/* Column 3: Calendar */}
+			<div className="flex flex-1 flex-col min-w-0 bg-kumo-base relative z-0">
+				{/* Header */}
+				<div className="flex items-center justify-between px-4 py-3 border-b border-kumo-line shrink-0">
 				<div className="flex items-center gap-4">
 					<h1 className="text-lg font-semibold text-kumo-default">Calendar</h1>
 					<div className="flex items-center gap-1 bg-kumo-control rounded-md p-0.5">
@@ -175,8 +212,8 @@ export default function CalendarRoute() {
 								{days.map((day, dayIdx) => {
 									const isCurrentMonth = day.getMonth() === currentDate.getMonth();
 									return (
-										<div key={dayIdx} className={`border-l border-b border-kumo-line p-1 relative flex flex-col ${!isCurrentMonth ? 'bg-kumo-tint/50' : ''}`}>
-											<div className={`text-sm font-medium text-right mb-1 mr-1 ${isSameDay(day, new Date()) ? 'text-kumo-brand bg-kumo-brand/10 w-6 h-6 rounded-full flex items-center justify-center ml-auto' : isCurrentMonth ? 'text-kumo-default' : 'text-kumo-subtle'}`}>
+										<div key={dayIdx} className={`border-l border-b border-kumo-line p-1 relative flex flex-col ${!isCurrentMonth ? 'bg-kumo-tint/50' : isSameDay(day, new Date()) ? 'bg-indigo-50/50' : ''}`}>
+											<div className={`text-sm font-medium text-right mb-1 mr-1 ${isSameDay(day, new Date()) ? 'text-indigo-600 font-bold' : isCurrentMonth ? 'text-kumo-default' : 'text-kumo-subtle'}`}>
 												{formatDayNum(day)}
 											</div>
 											<div className="flex-1 overflow-y-auto space-y-1">
@@ -363,6 +400,7 @@ export default function CalendarRoute() {
 					</div>
 				</div>
 			)}
+			</div>
 		</div>
 	);
 }

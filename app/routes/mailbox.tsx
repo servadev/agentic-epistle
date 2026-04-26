@@ -3,7 +3,7 @@
 //     https://opensource.org/licenses/Apache-2.0
 
 import { useEffect, useRef } from "react";
-import { Outlet, useParams, useLocation } from "react-router";
+import { Outlet, useParams, useLocation, useSearchParams } from "react-router";
 import AgentSidebar from "~/components/AgentSidebar";
 import ComposeEmail from "~/components/ComposeEmail";
 import Header from "~/components/Header";
@@ -29,6 +29,27 @@ export default function MailboxRoute() {
 	
 	const tags = mailbox?.settings?.tags || [];
 	const prevMailboxIdRef = useRef<string | undefined>(undefined);
+	const [searchParams, setSearchParams] = useSearchParams();
+	const currentFilter = searchParams.get("filter");
+	const currentTag = searchParams.get("tag");
+
+	const handleFilterClick = (filterType: "all" | "unread" | "tag", tagValue?: string) => {
+		const newParams = new URLSearchParams(searchParams);
+		if (filterType === "all") {
+			newParams.delete("filter");
+			newParams.delete("tag");
+		} else if (filterType === "unread") {
+			newParams.set("filter", "unread");
+			newParams.delete("tag");
+		} else if (filterType === "tag" && tagValue) {
+			newParams.delete("filter");
+			newParams.set("tag", tagValue);
+		}
+		// Reset to page 1 when filtering
+		newParams.set("page", "1");
+		setSearchParams(newParams);
+	};
+
 	const {
 		isSidebarOpen,
 		closeSidebar,
@@ -83,17 +104,26 @@ export default function MailboxRoute() {
 				<Header />
 				{location.pathname.endsWith("/inbox") && (
 					<div className="w-full border-b border-slate-200 bg-white px-4 py-2 flex items-center gap-2 overflow-x-auto hide-scrollbar">
-						<button type="button" className="shrink-0 flex items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-sm font-medium text-indigo-700 whitespace-nowrap hover:bg-indigo-100 transition-colors">
+						<button 
+							type="button" 
+							onClick={() => handleFilterClick("all")}
+							className={`shrink-0 flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium whitespace-nowrap transition-colors ${!currentFilter && !currentTag ? "border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
+						>
 							All messages ({allMessagesCount})
 						</button>
-						<button type="button" className="shrink-0 flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-sm font-medium text-slate-600 whitespace-nowrap hover:bg-slate-50 transition-colors">
+						<button 
+							type="button" 
+							onClick={() => handleFilterClick("unread")}
+							className={`shrink-0 flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium whitespace-nowrap transition-colors ${currentFilter === "unread" ? "border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
+						>
 							Unread ({unreadCount})
 						</button>
 						{tags.map((tag) => (
 							<button
 								key={tag.id}
 								type="button"
-								className="shrink-0 flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-sm font-medium text-slate-600 whitespace-nowrap hover:bg-slate-50 transition-colors"
+								onClick={() => handleFilterClick("tag", tag.id)}
+								className={`shrink-0 flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium whitespace-nowrap transition-colors ${currentTag === tag.id ? "border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
 							>
 								<span className={`h-2 w-2 rounded-full ${tag.color}`} />
 								{tag.name}

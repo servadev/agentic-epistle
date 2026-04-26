@@ -190,8 +190,10 @@ export default function EmailListRoute() {
 			folder: folder || "",
 			page: String(page),
 			limit: String(PAGE_SIZE),
+			...(searchParams.get("filter") ? { filter: searchParams.get("filter")! } : {}),
+			...(searchParams.get("tag") ? { tag: searchParams.get("tag")! } : {}),
 		}),
-		[folder, page],
+		[folder, page, searchParams],
 	);
 
 	const {

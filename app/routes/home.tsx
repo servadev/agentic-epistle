@@ -354,7 +354,10 @@ export default function HomeRoute() {
 
 			{/* Top Navigation */}
 			<div className="fixed top-0 left-0 right-0 h-16 bg-kumo-base/70 backdrop-blur border-b border-kumo-line flex items-center justify-between px-6 z-40">
-				<div className="font-semibold text-lg text-kumo-default">Epistle</div>
+				<div className="flex items-center gap-3">
+					<img src="/logo.png" alt="Epistle Logo" className="w-8 h-8 object-contain" />
+					<div className="font-semibold text-lg text-kumo-default">Epistle</div>
+				</div>
 				<div className="relative" ref={avatarMenuRef}>
 					<button
 						type="button"

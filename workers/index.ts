@@ -150,6 +150,8 @@ app.get("/api/v1/mailboxes/:mailboxId/emails", async (c: AppContext) => {
 	const folder = c.req.query("folder");
 	const thread_id = c.req.query("thread_id");
 	const threaded = boolQuery(c, "threaded");
+	const filter = c.req.query("filter");
+	const tag = c.req.query("tag");
 	const page = intQuery(c, "page");
 	const limit = intQuery(c, "limit");
 	const sortColumn = c.req.query("sortColumn") as any;
@@ -157,13 +159,13 @@ app.get("/api/v1/mailboxes/:mailboxId/emails", async (c: AppContext) => {
 	const stub = c.var.mailboxStub;
 
 	if (threaded && folder) {
-		const emails = await (stub as any).getThreadedEmails({ folder, page, limit });
-		const totalCount = await (stub as any).countThreadedEmails(folder);
+		const emails = await (stub as any).getThreadedEmails({ folder, page, limit, filter, tag });
+		const totalCount = await (stub as any).countThreadedEmails(folder, filter, tag);
 		return c.json({ emails, totalCount });
 	}
-	const emails = await stub.getEmails({ folder, thread_id, page, limit, sortColumn, sortDirection });
+	const emails = await stub.getEmails({ folder, thread_id, page, limit, sortColumn, sortDirection, filter, tag });
 	if (folder) {
-		const totalCount = await stub.countEmails({ folder, thread_id });
+		const totalCount = await stub.countEmails({ folder, thread_id, filter, tag });
 		return c.json({ emails, totalCount });
 	}
 	return c.json(emails);
@@ -247,8 +249,8 @@ app.get("/api/v1/mailboxes/:mailboxId/emails/:id", async (c: AppContext) => {
 });
 
 app.put("/api/v1/mailboxes/:mailboxId/emails/:id", async (c: AppContext) => {
-	const { read, starred } = (await c.req.json()) as { read?: boolean; starred?: boolean };
-	const email = await c.var.mailboxStub.updateEmail(c.req.param("id")!, { read, starred });
+	const { read, starred, tags } = (await c.req.json()) as { read?: boolean; starred?: boolean; tags?: any[] };
+	const email = await c.var.mailboxStub.updateEmail(c.req.param("id")!, { read, starred, tags });
 	return email ? c.json(email) : c.json({ error: "Email not found" }, 404);
 });
 
