@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useParams, Link } from "react-router";
 import { Button, Input, useKumoToastManager } from "@cloudflare/kumo";
-import { PlusIcon, XIcon, UserCircleIcon, MagnifyingGlassIcon, TrashIcon, BuildingsIcon, PhoneIcon } from "@phosphor-icons/react";
+import { PlusIcon, XIcon, UserCircleIcon, MagnifyingGlassIcon, TrashIcon, BuildingsIcon, PhoneIcon, ArrowLeftIcon } from "@phosphor-icons/react";
 import { useContacts, useCreateContact, useUpdateContact, useDeleteContact } from "~/queries/contacts";
 import { useSearchEmails } from "~/queries/search";
 import type { Contact } from "~/types";
@@ -92,10 +92,16 @@ export default function ContactsRoute() {
 		}
 	};
 
+	const isPanelOpen = selectedContact !== null || isEditOpen;
+
 	return (
-		<div className="flex h-full bg-kumo-base overflow-hidden">
+		<div className="relative flex h-full bg-kumo-base overflow-hidden">
 			{/* Left panel: List */}
-			<div className="flex flex-col w-full md:w-[380px] border-r border-kumo-line shrink-0">
+			<div 
+				className={`flex flex-col min-w-0 shrink-0 w-full md:w-[380px] md:border-r md:border-kumo-line transition-transform duration-300 ease-in-out ${
+					isPanelOpen ? "-translate-x-full md:translate-x-0" : "translate-x-0"
+				}`}
+			>
 				<div className="p-4 border-b border-kumo-line flex flex-col gap-3">
 					<div className="flex items-center justify-between">
 						<h1 className="text-lg font-semibold text-kumo-default">Contacts</h1>
@@ -159,17 +165,21 @@ export default function ContactsRoute() {
 			</div>
 
 			{/* Right panel: Details / Form */}
-			<div className="flex-1 flex flex-col min-w-0 bg-kumo-recessed">
+			<div 
+				className={`absolute inset-0 md:relative md:inset-auto md:flex-1 flex flex-col min-w-0 bg-kumo-recessed transition-transform duration-300 ease-in-out z-10 md:z-auto ${
+					isPanelOpen ? "translate-x-0" : "translate-x-full md:translate-x-0"
+				}`}
+			>
 				{isEditOpen ? (
-					<div className="max-w-2xl w-full mx-auto p-8 flex flex-col gap-6">
+					<div className="max-w-2xl w-full mx-auto p-4 md:p-8 flex flex-col gap-6 overflow-y-auto">
 						<div className="flex items-center justify-between">
 							<h2 className="text-xl font-semibold text-kumo-default">
 								{selectedContact ? "Edit Contact" : "New Contact"}
 							</h2>
 							<Button variant="ghost" icon={<XIcon />} onClick={() => setIsEditOpen(false)} />
 						</div>
-						<form onSubmit={handleSave} className="flex flex-col gap-4 bg-kumo-base p-6 rounded-xl border border-kumo-line shadow-sm">
-							<div className="grid grid-cols-2 gap-4">
+						<form onSubmit={handleSave} className="flex flex-col gap-4 bg-kumo-base p-4 md:p-6 rounded-xl border border-kumo-line shadow-sm">
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 								<Input 
 									label="Name" 
 									required 
@@ -184,7 +194,7 @@ export default function ContactsRoute() {
 									onChange={e => setEditForm({...editForm, email: e.target.value})} 
 								/>
 							</div>
-							<div className="grid grid-cols-2 gap-4">
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 								<Input 
 									label="Phone" 
 									value={editForm.phone || ""} 
@@ -214,25 +224,31 @@ export default function ContactsRoute() {
 						</form>
 					</div>
 				) : selectedContact ? (
-					<div className="flex-1 flex flex-col max-w-3xl mx-auto w-full p-8 overflow-y-auto">
-						<div className="flex items-start justify-between mb-8">
-							<div className="flex items-center gap-4">
-								<div className="w-16 h-16 rounded-full bg-kumo-tint flex items-center justify-center text-kumo-brand shrink-0">
-									<UserCircleIcon size={40} weight="light" />
+					<div className="flex-1 flex flex-col max-w-3xl mx-auto w-full p-4 md:p-8 overflow-y-auto">
+						<div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-8">
+							<div className="flex items-center gap-3 md:gap-4">
+								<Button 
+									variant="ghost" 
+									className="md:hidden -ml-2 text-kumo-subtle" 
+									icon={<ArrowLeftIcon size={20} />} 
+									onClick={() => setSelectedContact(null)} 
+								/>
+								<div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-kumo-tint flex items-center justify-center text-kumo-brand shrink-0">
+									<UserCircleIcon size={36} weight="light" className="md:w-10 md:h-10" />
 								</div>
 								<div>
-									<div className="flex items-center gap-3">
-										<h2 className="text-2xl font-bold text-kumo-default">{selectedContact.name}</h2>
+									<div className="flex items-center gap-2 md:gap-3">
+										<h2 className="text-xl md:text-2xl font-bold text-kumo-default">{selectedContact.name}</h2>
 										{selectedContact.email === mailboxId && (
 											<span className="rounded bg-kumo-brand/10 px-2 py-0.5 text-xs font-semibold text-kumo-brand">
 												Me
 											</span>
 										)}
 									</div>
-									<div className="text-kumo-subtle">{selectedContact.email}</div>
+									<div className="text-sm md:text-base text-kumo-subtle">{selectedContact.email}</div>
 								</div>
 							</div>
-							<div className="flex items-center gap-2">
+							<div className="flex items-center gap-2 self-end md:self-auto">
 								<Button 
 									variant="secondary" 
 									onClick={() => {
@@ -254,7 +270,7 @@ export default function ContactsRoute() {
 							</div>
 						</div>
 
-						<div className="grid grid-cols-2 gap-6 mb-8">
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-8">
 							{selectedContact.org && (
 								<div className="flex items-center gap-3 bg-kumo-base p-4 rounded-xl border border-kumo-line">
 									<div className="w-10 h-10 rounded-full bg-kumo-tint flex items-center justify-center text-kumo-subtle shrink-0">
@@ -316,12 +332,14 @@ export default function ContactsRoute() {
 						</div>
 					</div>
 				) : (
-					<div className="flex-1 flex flex-col items-center justify-center relative bg-gradient-to-br from-indigo-50 via-slate-50 to-cyan-50 w-full h-full overflow-hidden">
+					<div className="flex-1 flex flex-col items-center justify-center relative bg-gradient-to-br from-indigo-50 via-slate-50 to-cyan-50 w-full h-full overflow-hidden hidden md:flex">
 						{/* Faded background watermark */}
 						<div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
-							<span className="text-[12rem] font-bold text-slate-200/50 tracking-tighter">
-								Epistle
-							</span>
+							<img 
+								src="/feather.svg" 
+								alt="Epistle Watermark" 
+								className="w-96 h-96 md:w-[500px] md:h-[500px] object-contain opacity-[0.03] grayscale"
+							/>
 						</div>
 						
 						{/* Foreground content */}
