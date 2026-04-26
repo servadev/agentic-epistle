@@ -12,7 +12,7 @@ import {
 } from "@cloudflare/kumo";
 import { WarningIcon } from "@phosphor-icons/react";
 import { MutationCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { forwardRef, useState } from "react";
+import { forwardRef, useEffect, useState } from "react";
 import {
 	isRouteErrorResponse,
 	Links,
@@ -116,6 +116,15 @@ export default function App() {
 	// Use useState to ensure each SSR request gets a fresh client while the
 	// browser reuses the same singleton across navigations.
 	const [queryClient] = useState(getQueryClient);
+
+	useEffect(() => {
+		if ("serviceWorker" in navigator) {
+			navigator.serviceWorker.register("/sw.js").catch((error) => {
+				console.error("Service Worker registration failed:", error);
+			});
+		}
+	}, []);
+
 	return (
 		<QueryClientProvider client={queryClient}>
 			<LinkProvider component={KumoLink}>
