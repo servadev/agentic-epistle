@@ -14,6 +14,7 @@ export interface MailboxSettings {
 	signature?: SignatureSettings;
 	autoReply?: { enabled: boolean; subject: string; message: string };
 	agentSystemPrompt?: string;
+	tags?: Tag[];
 }
 
 export interface Mailbox {
@@ -21,6 +22,12 @@ export interface Mailbox {
 	email: string;
 	name: string;
 	settings?: MailboxSettings;
+}
+
+export interface Tag {
+	id: string;
+	name: string;
+	color: string;
 }
 
 export interface Email {
@@ -35,6 +42,7 @@ export interface Email {
 	date: string;
 	read: boolean;
 	starred: boolean;
+	tags?: Tag[];
 	body?: string | null;
 	in_reply_to?: string | null;
 	email_references?: string | null;

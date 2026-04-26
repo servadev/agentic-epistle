@@ -160,6 +160,7 @@ export class MailboxDO extends DurableObject<Env> {
 				email_references: schema.emails.email_references,
 				thread_id: schema.emails.thread_id,
 				folder_id: schema.emails.folder_id,
+				tags: schema.emails.tags,
 				snippet: sql<string>`SUBSTR(${schema.emails.body}, 1, 300)`,
 			})
 			.from(schema.emails)
@@ -266,7 +267,7 @@ export class MailboxDO extends DurableObject<Env> {
 				SELECT
 					lp.id, lp.subject, lp.sender, lp.recipient, lp.date,
 					lp.read, lp.starred, lp.thread_id, lp.folder_id,
-					lp.in_reply_to, lp.email_references,
+					lp.in_reply_to, lp.email_references, lp.tags,
 					SUBSTR(lp.body, 1, 300) as snippet,
 					ds.thread_count, ds.thread_unread_count, ds.participants
 				FROM latest_per_group lp
@@ -354,7 +355,7 @@ export class MailboxDO extends DurableObject<Env> {
 			SELECT
 				lif.id, lif.subject, lif.sender, lif.recipient, lif.date,
 				lif.read, lif.starred, lif.thread_id, lif.folder_id,
-				lif.in_reply_to, lif.email_references,
+				lif.in_reply_to, lif.email_references, lif.tags,
 				SUBSTR(lif.body, 1, 300) as snippet,
 				cs.thread_count, cs.thread_unread_count, cs.participants,
 				CASE WHEN lmc.folder_id != (SELECT id FROM folders WHERE name = 'sent' LIMIT 1)
@@ -503,14 +504,17 @@ export class MailboxDO extends DurableObject<Env> {
 
 	async updateEmail(
 		id: string,
-		{ read, starred }: { read?: boolean; starred?: boolean },
+		{ read, starred, tags }: { read?: boolean; starred?: boolean; tags?: string[] },
 	) {
-		const data: { read?: number; starred?: number } = {};
+		const data: { read?: number; starred?: number; tags?: string[] } = {};
 		if (read !== undefined) {
 			data.read = read ? 1 : 0;
 		}
 		if (starred !== undefined) {
 			data.starred = starred ? 1 : 0;
+		}
+		if (tags !== undefined) {
+			data.tags = tags;
 		}
 
 		if (Object.keys(data).length === 0) {
@@ -705,7 +709,7 @@ export class MailboxDO extends DurableObject<Env> {
 		const query = `
 			SELECT e.id, e.subject, e.sender, e.recipient, e.cc, e.bcc, e.date,
 				e.read, e.starred, e.in_reply_to, e.email_references,
-				e.thread_id, e.folder_id,
+				e.thread_id, e.folder_id, e.tags,
 				SUBSTR(e.body, 1, 300) as snippet,
 				f.name as folder_name
 			FROM emails e

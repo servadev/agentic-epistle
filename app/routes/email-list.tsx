@@ -13,6 +13,7 @@ import {
 	PaperPlaneTiltIcon,
 	PencilSimpleIcon,
 	StarIcon,
+	TagIcon,
 	TrashIcon,
 	TrayIcon,
 } from "@phosphor-icons/react";
@@ -22,6 +23,7 @@ import { useParams, useSearchParams } from "react-router";
 import { Folders } from "shared/folders";
 import { formatListDate, formatShortDate } from "shared/dates";
 import MailboxSplitView from "~/components/MailboxSplitView";
+import TagModal from "~/components/TagModal";
 import { getSnippetText } from "~/lib/utils";
 import {
 	useDeleteEmail,
@@ -176,6 +178,7 @@ export default function EmailListRoute() {
 		startCompose,
 	} = useUIStore();
 	const [page, setPage] = useState(1);
+	const [tagModalEmail, setTagModalEmail] = useState<Email | null>(null);
 
 	const queryClient = useQueryClient();
 	const updateEmail = useUpdateEmail();
@@ -484,17 +487,37 @@ export default function EmailListRoute() {
 													<div className="text-sm text-slate-500 line-clamp-2 leading-relaxed mt-0.5">
 														{snippet || <span className="italic text-slate-400">No content</span>}
 													</div>
-													{/* Topic tag pills placeholder */}
-													<div className="flex justify-end mt-2">
-														<span className="inline-flex items-center gap-1.5 rounded-md bg-white px-2 py-0.5 text-[10px] font-bold text-slate-600 ring-1 ring-inset ring-slate-200 shadow-sm uppercase tracking-wider">
-															<span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
-															Design
-														</span>
-													</div>
+													{/* Topic tag pills */}
+													{email.tags && email.tags.length > 0 && (
+														<div className="flex flex-wrap gap-1.5 justify-end mt-2">
+															{email.tags.map((tag) => (
+																<span
+																	key={tag.id}
+																	className="inline-flex items-center gap-1.5 rounded-md bg-white px-2 py-0.5 text-[10px] font-bold text-slate-600 ring-1 ring-inset ring-slate-200 shadow-sm uppercase tracking-wider"
+																>
+																	<span className={`h-1.5 w-1.5 rounded-full ${tag.color}`} />
+																	{tag.name}
+																</span>
+															))}
+														</div>
+													)}
 												</div>
 
 												{/* Hover actions */}
 												<div className="hidden group-hover:flex items-center shrink-0 absolute top-3 right-4 bg-white/90 backdrop-blur rounded-md shadow-sm border border-slate-200">
+													<Tooltip content="Tag" asChild>
+														<Button
+															variant="ghost"
+															shape="square"
+															size="sm"
+															icon={<TagIcon size={14} />}
+															onClick={(e) => {
+																e.stopPropagation();
+																setTagModalEmail(email);
+															}}
+															aria-label="Tag"
+														/>
+													</Tooltip>
 													<Tooltip content={email.read ? "Mark unread" : "Mark read"} asChild>
 														<Button
 															variant="ghost"
@@ -549,6 +572,16 @@ export default function EmailListRoute() {
 						/>
 					</div>
 				)}
+			
+			{/* Tag Modal */}
+			{mailboxId && (
+				<TagModal
+					email={tagModalEmail}
+					mailboxId={mailboxId}
+					isOpen={!!tagModalEmail}
+					onClose={() => setTagModalEmail(null)}
+				/>
+			)}
 		</MailboxSplitView>
 	);
 }

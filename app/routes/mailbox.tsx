@@ -9,6 +9,9 @@ import ComposeEmail from "~/components/ComposeEmail";
 import Header from "~/components/Header";
 import Sidebar from "~/components/Sidebar";
 import { useMailbox } from "~/queries/mailboxes";
+import { useEmails } from "~/queries/emails";
+import { useFolders } from "~/queries/folders";
+import { Folders } from "shared/folders";
 import { useUIStore } from "~/hooks/useUIStore";
 import { safeSetStorage } from "~/lib/utils";
 
@@ -16,7 +19,15 @@ export default function MailboxRoute() {
 	const { mailboxId } = useParams<{ mailboxId: string }>();
 	const location = useLocation();
 	// Prefetch mailbox data for child components
-	useMailbox(mailboxId);
+	const { data: mailbox } = useMailbox(mailboxId);
+	
+	// Fetch data for pills
+	const { data: inboxData } = useEmails(mailboxId, { folder: Folders.INBOX });
+	const { data: folders } = useFolders(mailboxId);
+	const allMessagesCount = inboxData?.totalCount || 0;
+	const unreadCount = folders?.find(f => f.id === Folders.INBOX)?.unreadCount || 0;
+	
+	const tags = mailbox?.settings?.tags || [];
 	const prevMailboxIdRef = useRef<string | undefined>(undefined);
 	const {
 		isSidebarOpen,
@@ -73,27 +84,21 @@ export default function MailboxRoute() {
 				{location.pathname.endsWith("/inbox") && (
 					<div className="w-full border-b border-slate-200 bg-white px-4 py-2 flex items-center gap-2 overflow-x-auto hide-scrollbar">
 						<button type="button" className="shrink-0 flex items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-sm font-medium text-indigo-700 whitespace-nowrap hover:bg-indigo-100 transition-colors">
-							All messages (25)
+							All messages ({allMessagesCount})
 						</button>
 						<button type="button" className="shrink-0 flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-sm font-medium text-slate-600 whitespace-nowrap hover:bg-slate-50 transition-colors">
-							Unread (6)
+							Unread ({unreadCount})
 						</button>
-						<button type="button" className="shrink-0 flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-sm font-medium text-slate-600 whitespace-nowrap hover:bg-slate-50 transition-colors">
-							<span className="h-2 w-2 rounded-full bg-teal-600" />
-							Collaboration
-						</button>
-						<button type="button" className="shrink-0 flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-sm font-medium text-slate-600 whitespace-nowrap hover:bg-slate-50 transition-colors">
-							<span className="h-2 w-2 rounded-full bg-amber-500" />
-							New client
-						</button>
-						<button type="button" className="shrink-0 flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-sm font-medium text-slate-600 whitespace-nowrap hover:bg-slate-50 transition-colors">
-							<span className="h-2 w-2 rounded-full bg-rose-600" />
-							Payments
-						</button>
-						<button type="button" className="shrink-0 flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-sm font-medium text-slate-600 whitespace-nowrap hover:bg-slate-50 transition-colors">
-							<span className="h-2 w-2 rounded-full bg-emerald-500" />
-							Wedding
-						</button>
+						{tags.map((tag) => (
+							<button
+								key={tag.id}
+								type="button"
+								className="shrink-0 flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-sm font-medium text-slate-600 whitespace-nowrap hover:bg-slate-50 transition-colors"
+							>
+								<span className={`h-2 w-2 rounded-full ${tag.color}`} />
+								{tag.name}
+							</button>
+						))}
 					</div>
 				)}
 				<main className="flex-1 overflow-hidden">
