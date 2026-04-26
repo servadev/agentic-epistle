@@ -190,6 +190,10 @@ export const calendarMigrations: Migration[] = [
 			);
 		`),
 	},
+	{
+		name: "2_add_contacts_to_events",
+		sql: txn(`ALTER TABLE events ADD COLUMN contacts TEXT;`),
+	},
 ];
 
 export const contactMigrations: Migration[] = [

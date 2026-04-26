@@ -53,6 +53,7 @@ export const events = sqliteTable("events", {
 	description: text("description"),
 	location: text("location"),
 	source: text("source"),
+	contacts: text("contacts", { mode: "json" }).$type<string[]>(),
 });
 
 export const contacts = sqliteTable("contacts", {

@@ -3,8 +3,10 @@ import { createPortal } from "react-dom";
 import { useParams } from "react-router";
 import { Button, Input, useKumoToastManager } from "@cloudflare/kumo";
 import { useEvents, useCreateEvent, useDeleteEvent, useUpdateEvent } from "~/queries/calendar";
-import { CaretLeftIcon, CaretRightIcon, CalendarPlusIcon, XIcon, ClockIcon, DotsThreeIcon } from "@phosphor-icons/react";
-import type { CalendarEvent } from "~/types";
+import { useContacts } from "~/queries/contacts";
+import { CaretLeftIcon, CaretRightIcon, CalendarPlusIcon, XIcon, ClockIcon, DotsThreeIcon, UserCircleIcon } from "@phosphor-icons/react";
+import { ContactSelector } from "~/components/ContactSelector";
+import type { CalendarEvent, Contact } from "~/types";
 import {
 	startOfWeek,
 	addDays,
@@ -104,6 +106,13 @@ export default function CalendarRoute() {
 	}
 
 	const { data: events = [] } = useEvents(mailboxId, { start: startStr, end: endStr });
+	const { data: contactsData } = useContacts(mailboxId);
+	const contactsMap = new Map<string, Contact>();
+	if (contactsData?.contacts) {
+		for (const c of contactsData.contacts) {
+			contactsMap.set(c.id, c);
+		}
+	}
 	
 	const [isNewEventOpen, setIsNewEventOpen] = useState(false);
 	const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
@@ -129,7 +138,13 @@ export default function CalendarRoute() {
 	const deleteEventMutation = useDeleteEvent();
 	const updateEventMutation = useUpdateEvent();
 
-	const [newEvent, setNewEvent] = useState({ title: "", start_at: "", end_at: "", description: "" });
+	const [newEvent, setNewEvent] = useState<{
+		title: string;
+		start_at: string;
+		end_at: string;
+		description: string;
+		contacts: string[];
+	}>({ title: "", start_at: "", end_at: "", description: "", contacts: [] });
 	const [isEditEventOpen, setIsEditEventOpen] = useState(false);
 	const [editEvent, setEditEvent] = useState<CalendarEvent | null>(null);
 
@@ -157,7 +172,7 @@ export default function CalendarRoute() {
 				}
 			});
 			setIsNewEventOpen(false);
-			setNewEvent({ title: "", start_at: "", end_at: "", description: "" });
+			setNewEvent({ title: "", start_at: "", end_at: "", description: "", contacts: [] });
 			toastManager.add({ title: "Event created successfully!" });
 		} catch (err) {
 			const message = (err instanceof Error ? err.message : null) || "Failed to create event.";
@@ -257,7 +272,7 @@ export default function CalendarRoute() {
 										<div className="text-sm font-semibold text-kumo-default truncate pt-1">{event.title}</div>
 										<EventMenu 
 											onEdit={() => {
-												setEditEvent({ ...event });
+												setEditEvent({ ...event, contacts: event.contacts || [] });
 												setIsEditEventOpen(true);
 											}}
 											onDelete={() => {
@@ -276,6 +291,24 @@ export default function CalendarRoute() {
 										</div>
 										<span>{new Date(event.start_at).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
 									</div>
+									{event.contacts && event.contacts.length > 0 && (
+										<div className="mt-3 flex flex-wrap gap-1.5">
+											{event.contacts.map((contactId: string) => {
+												const contact = contactsMap.get(contactId);
+												if (!contact) return null;
+												return (
+													<div key={contact.id} className="flex items-center gap-1 bg-kumo-tint rounded-full py-0.5 pl-0.5 pr-2 border border-kumo-line">
+														{contact.avatar_url ? (
+															<img src={contact.avatar_url} alt="" className="w-4 h-4 rounded-full" />
+														) : (
+															<UserCircleIcon className="w-4 h-4 text-kumo-subtle" weight="fill" />
+														)}
+														<span className="text-[10px] font-medium text-kumo-strong truncate max-w-[100px]">{contact.name}</span>
+													</div>
+												);
+											})}
+										</div>
+									)}
 								</div>
 							))
 					)}
@@ -431,7 +464,7 @@ export default function CalendarRoute() {
 											<h3 className="text-2xl font-bold text-kumo-default tracking-tight break-words">{selectedEvent.title}</h3>
 											<EventMenu 
 												onEdit={() => {
-													setEditEvent({...selectedEvent});
+													setEditEvent({...selectedEvent, contacts: selectedEvent.contacts || []});
 													setSelectedEvent(null);
 													setIsEditEventOpen(true);
 												}}
@@ -498,21 +531,25 @@ export default function CalendarRoute() {
 								value={newEvent.title} 
 								onChange={e => setNewEvent({...newEvent, title: e.target.value})} 
 							/>
-							<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-								<Input 
-									label="Start" 
-									type="datetime-local" 
-									required 
-									value={newEvent.start_at} 
-									onChange={e => setNewEvent({...newEvent, start_at: e.target.value})} 
-								/>
-								<Input 
-									label="End" 
-									type="datetime-local" 
-									required 
-									value={newEvent.end_at} 
-									onChange={e => setNewEvent({...newEvent, end_at: e.target.value})} 
-								/>
+							<div className="flex flex-col sm:flex-row gap-4">
+								<div className="flex-1 min-w-0">
+									<Input 
+										label="Start" 
+										type="datetime-local" 
+										required 
+										value={newEvent.start_at} 
+										onChange={e => setNewEvent({...newEvent, start_at: e.target.value})} 
+									/>
+								</div>
+								<div className="flex-1 min-w-0">
+									<Input 
+										label="End" 
+										type="datetime-local" 
+										required 
+										value={newEvent.end_at} 
+										onChange={e => setNewEvent({...newEvent, end_at: e.target.value})} 
+									/>
+								</div>
 							</div>
 							<div>
 								<label className="block text-sm font-medium text-kumo-default mb-1">Description</label>
@@ -523,6 +560,11 @@ export default function CalendarRoute() {
 									onChange={e => setNewEvent({...newEvent, description: e.target.value})}
 								/>
 							</div>
+							<ContactSelector 
+								mailboxId={mailboxId}
+								selectedContacts={newEvent.contacts}
+								onChange={(contacts) => setNewEvent({ ...newEvent, contacts })}
+							/>
 							<div className="pt-4 flex justify-end gap-2">
 								<Button type="button" variant="secondary" onClick={() => setIsNewEventOpen(false)}>Cancel</Button>
 								<Button variant="primary" type="submit" disabled={createEventMutation.isPending}>
@@ -551,21 +593,25 @@ export default function CalendarRoute() {
 									value={editEvent.title} 
 									onChange={e => setEditEvent({...editEvent, title: e.target.value})} 
 								/>
-								<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-									<Input 
-										label="Start" 
-										type="datetime-local" 
-										required 
-										value={editEvent.start_at ? new Date(editEvent.start_at).toISOString().slice(0, 16) : ""} 
-										onChange={e => setEditEvent({...editEvent, start_at: e.target.value})} 
-									/>
-									<Input 
-										label="End" 
-										type="datetime-local" 
-										required 
-										value={editEvent.end_at ? new Date(editEvent.end_at).toISOString().slice(0, 16) : ""} 
-										onChange={e => setEditEvent({...editEvent, end_at: e.target.value})} 
-									/>
+								<div className="flex flex-col sm:flex-row gap-4">
+									<div className="flex-1 min-w-0">
+										<Input 
+											label="Start" 
+											type="datetime-local" 
+											required 
+											value={editEvent.start_at ? new Date(editEvent.start_at).toISOString().slice(0, 16) : ""} 
+											onChange={(e) => setEditEvent({...editEvent, start_at: e.target.value})} 
+										/>
+									</div>
+									<div className="flex-1 min-w-0">
+										<Input 
+											label="End" 
+											type="datetime-local" 
+											required 
+											value={editEvent.end_at ? new Date(editEvent.end_at).toISOString().slice(0, 16) : ""} 
+											onChange={(e) => setEditEvent({...editEvent, end_at: e.target.value})} 
+										/>
+									</div>
 								</div>
 								<div>
 									<label className="block text-sm font-medium text-kumo-default mb-1">Description</label>
@@ -576,6 +622,11 @@ export default function CalendarRoute() {
 										onChange={e => setEditEvent({...editEvent, description: e.target.value})}
 									/>
 								</div>
+								<ContactSelector 
+									mailboxId={mailboxId}
+									selectedContacts={editEvent.contacts || []}
+									onChange={(contacts) => setEditEvent({ ...editEvent, contacts })}
+								/>
 								<div className="pt-4 flex justify-end gap-2">
 									<Button type="button" variant="secondary" onClick={() => setIsEditEventOpen(false)}>Cancel</Button>
 									<Button variant="primary" type="submit" disabled={updateEventMutation.isPending}>
