@@ -52,9 +52,11 @@ export default function MailboxSplitView({
 						<div className="flex-1 flex flex-col items-center justify-center relative bg-gradient-to-br from-indigo-50 via-slate-50 to-cyan-50 w-full h-full overflow-hidden hidden md:flex">
 							{/* Faded background watermark */}
 							<div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
-								<span className="text-[12rem] font-bold text-slate-200/50 tracking-tighter">
-									Epistle
-								</span>
+								<img 
+									src="/feather.svg" 
+									alt="Epistle Watermark" 
+									className="w-96 h-96 md:w-[500px] md:h-[500px] object-contain opacity-[0.03] grayscale"
+								/>
 							</div>
 							
 							{/* Foreground content */}

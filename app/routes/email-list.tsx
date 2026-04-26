@@ -368,26 +368,6 @@ export default function EmailListRoute() {
 								{totalCount} conversation{totalCount !== 1 ? "s" : ""}
 							</span>
 						)}
-						<Tooltip
-							content={isRefreshing ? "Refreshing..." : "Refresh"}
-							side="bottom"
-							asChild
-						>
-							<Button
-								variant="ghost"
-								shape="square"
-								size="sm"
-								icon={
-									<ArrowsClockwiseIcon
-										size={18}
-										className={isRefreshing ? "animate-spin" : ""}
-									/>
-								}
-								onClick={handleRefresh}
-								disabled={isRefreshing}
-								aria-label="Refresh"
-							/>
-						</Tooltip>
 					</div>
 				</div>
 

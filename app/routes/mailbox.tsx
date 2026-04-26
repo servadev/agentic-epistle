@@ -4,6 +4,7 @@
 
 import { useEffect, useRef } from "react";
 import { Outlet, useParams, useLocation, useSearchParams } from "react-router";
+import { useQueryClient, useIsFetching } from "@tanstack/react-query";
 import AgentSidebar from "~/components/AgentSidebar";
 import ComposeEmail from "~/components/ComposeEmail";
 import Header from "~/components/Header";
@@ -12,8 +13,11 @@ import { useMailbox } from "~/queries/mailboxes";
 import { useEmails } from "~/queries/emails";
 import { useFolders } from "~/queries/folders";
 import { Folders } from "shared/folders";
+import { queryKeys } from "~/queries/keys";
 import { useUIStore } from "~/hooks/useUIStore";
 import { safeSetStorage } from "~/lib/utils";
+import { Button, Tooltip } from "@cloudflare/kumo";
+import { ArrowsClockwiseIcon } from "@phosphor-icons/react";
 
 export default function MailboxRoute() {
 	const { mailboxId } = useParams<{ mailboxId: string }>();
@@ -32,6 +36,18 @@ export default function MailboxRoute() {
 	const [searchParams, setSearchParams] = useSearchParams();
 	const currentFilter = searchParams.get("filter");
 	const currentTag = searchParams.get("tag");
+
+	const queryClient = useQueryClient();
+	const isRefreshing = useIsFetching({ queryKey: ["emails", mailboxId] }) > 0;
+
+	const handleRefresh = () => {
+		if (mailboxId) {
+			queryClient.invalidateQueries({ queryKey: ["emails", mailboxId] });
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.folders.list(mailboxId),
+			});
+		}
+	};
 
 	const handleFilterClick = (filterType: "all" | "unread" | "tag", tagValue?: string) => {
 		const newParams = new URLSearchParams(searchParams);
@@ -103,32 +119,52 @@ export default function MailboxRoute() {
 			<div className="flex-1 flex flex-col min-w-0 bg-kumo-base">
 				<Header />
 				{location.pathname.endsWith("/inbox") && (
-					<div className="w-full border-b border-slate-200 bg-white px-4 py-2 flex items-center gap-2 overflow-x-auto hide-scrollbar">
-						<button 
-							type="button" 
-							onClick={() => handleFilterClick("all")}
-							className={`shrink-0 flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium whitespace-nowrap transition-colors ${!currentFilter && !currentTag ? "border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
-						>
-							All messages ({allMessagesCount})
-						</button>
-						<button 
-							type="button" 
-							onClick={() => handleFilterClick("unread")}
-							className={`shrink-0 flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium whitespace-nowrap transition-colors ${currentFilter === "unread" ? "border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
-						>
-							Unread ({unreadCount})
-						</button>
-						{tags.map((tag) => (
-							<button
-								key={tag.id}
-								type="button"
-								onClick={() => handleFilterClick("tag", tag.id)}
-								className={`shrink-0 flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium whitespace-nowrap transition-colors ${currentTag === tag.id ? "border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
+					<div className="w-full border-b border-slate-200 bg-white px-4 py-2 flex items-center justify-between gap-4">
+						<div className="flex-1 flex items-center gap-2 overflow-x-auto hide-scrollbar pr-2">
+							<button 
+								type="button" 
+								onClick={() => handleFilterClick("all")}
+								className={`shrink-0 flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium whitespace-nowrap transition-colors ${!currentFilter && !currentTag ? "border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
 							>
-								<span className={`h-2 w-2 rounded-full ${tag.color}`} />
-								{tag.name}
+								All messages ({allMessagesCount})
 							</button>
-						))}
+							<button 
+								type="button" 
+								onClick={() => handleFilterClick("unread")}
+								className={`shrink-0 flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium whitespace-nowrap transition-colors ${currentFilter === "unread" ? "border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
+							>
+								Unread ({unreadCount})
+							</button>
+							{tags.map((tag) => (
+								<button
+									key={tag.id}
+									type="button"
+									onClick={() => handleFilterClick("tag", tag.id)}
+									className={`shrink-0 flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium whitespace-nowrap transition-colors ${currentTag === tag.id ? "border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
+								>
+									<span className={`h-2 w-2 rounded-full ${tag.color}`} />
+									{tag.name}
+								</button>
+							))}
+						</div>
+						<div className="shrink-0 flex items-center">
+							<Tooltip content={isRefreshing ? "Refreshing..." : "Refresh"} side="bottom" asChild>
+								<Button
+									variant="ghost"
+									shape="square"
+									size="sm"
+									icon={
+										<ArrowsClockwiseIcon
+											size={18}
+											className={isRefreshing ? "animate-spin" : ""}
+										/>
+									}
+									onClick={handleRefresh}
+									disabled={isRefreshing}
+									aria-label="Refresh"
+								/>
+							</Tooltip>
+						</div>
 					</div>
 				)}
 				<main className="flex-1 overflow-hidden">
