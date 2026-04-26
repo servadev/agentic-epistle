@@ -30,6 +30,7 @@ import {
 	useUpdateEmail,
 } from "~/queries/emails";
 import { useFolders } from "~/queries/folders";
+import { useContacts } from "~/queries/contacts";
 import { queryKeys } from "~/queries/keys";
 import { useUIStore } from "~/hooks/useUIStore";
 import type { Email } from "~/types";
@@ -199,6 +200,8 @@ export default function EmailListRoute() {
 	const totalCount = emailData?.totalCount ?? 0;
 
 	const { data: folders = [] } = useFolders(mailboxId);
+	const { data: contactsData } = useContacts(mailboxId);
+	const contacts = contactsData?.contacts || [];
 
 	const folderName = useMemo(() => {
 		const found = folders.find((f) => f.id === folder);
@@ -297,6 +300,12 @@ export default function EmailListRoute() {
 				.split(",")
 				.map((p) => {
 					const trimmed = p.trim();
+					const emailMatch = trimmed.match(/<([^>]+)>/);
+					const rawEmail = emailMatch ? emailMatch[1] : trimmed;
+					
+					const contact = contacts.find(c => c.email.toLowerCase() === rawEmail.toLowerCase());
+					if (contact?.name) return contact.name;
+
 					// Extract name if format is "Name" <email@domain.com>
 					const match = trimmed.match(/^"?(.*?)"?\s*<.*>$/);
 					if (match && match[1]) {
@@ -310,9 +319,14 @@ export default function EmailListRoute() {
 		}
 		
 		// Fallback for sender if participants is empty
-		const senderMatch = email.sender.match(/^"?(.*?)"?\s*<.*>$/);
-		if (senderMatch && senderMatch[1]) {
-			return senderMatch[1].trim();
+		const senderMatch = email.sender.match(/<([^>]+)>/);
+		const rawSenderEmail = senderMatch ? senderMatch[1] : email.sender;
+		const senderContact = contacts.find(c => c.email.toLowerCase() === rawSenderEmail.toLowerCase());
+		if (senderContact?.name) return senderContact.name;
+
+		const match = email.sender.match(/^"?(.*?)"?\s*<.*>$/);
+		if (match && match[1]) {
+			return match[1].trim();
 		}
 		return email.sender.split("@")[0];
 	};
@@ -467,17 +481,15 @@ export default function EmailListRoute() {
 														)}
 													</div>
 
-													<div className="flex items-end justify-between gap-3 mt-0.5">
-														<div className="text-sm text-slate-500 line-clamp-2 leading-relaxed flex-1">
-															{snippet || <span className="italic text-slate-400">No content</span>}
-														</div>
-														{/* Topic tag pills placeholder */}
-														<div className="shrink-0 mb-0.5">
-															<span className="inline-flex items-center gap-1.5 rounded-md bg-white px-2 py-0.5 text-[10px] font-bold text-slate-600 ring-1 ring-inset ring-slate-200 shadow-sm uppercase tracking-wider">
-																<span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
-																Design
-															</span>
-														</div>
+													<div className="text-sm text-slate-500 line-clamp-2 leading-relaxed mt-0.5">
+														{snippet || <span className="italic text-slate-400">No content</span>}
+													</div>
+													{/* Topic tag pills placeholder */}
+													<div className="flex justify-end mt-2">
+														<span className="inline-flex items-center gap-1.5 rounded-md bg-white px-2 py-0.5 text-[10px] font-bold text-slate-600 ring-1 ring-inset ring-slate-200 shadow-sm uppercase tracking-wider">
+															<span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
+															Design
+														</span>
 													</div>
 												</div>
 

@@ -307,8 +307,23 @@ export default function ContactsRoute() {
 						</div>
 					</div>
 				) : (
-					<div className="flex-1 flex items-center justify-center text-kumo-subtle">
-						Select a contact to view details
+					<div className="flex-1 flex flex-col items-center justify-center relative bg-gradient-to-br from-indigo-50 via-slate-50 to-cyan-50 w-full h-full overflow-hidden">
+						{/* Faded background watermark */}
+						<div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
+							<span className="text-[12rem] font-bold text-slate-200/50 tracking-tighter">
+								Epistle
+							</span>
+						</div>
+						
+						{/* Foreground content */}
+						<div className="relative z-10 flex flex-col items-center justify-center gap-2 pointer-events-none select-none">
+							<h2 className="text-4xl font-bold text-slate-300 tracking-tight">
+								Epistle
+							</h2>
+							<p className="text-sm font-medium text-slate-400">
+								Select a contact to view details
+							</p>
+						</div>
 					</div>
 				)}
 			</div>

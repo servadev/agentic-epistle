@@ -33,44 +33,42 @@ export default function MailboxSplitView({
 			
 			<div
 				className={`absolute inset-0 md:relative md:inset-auto md:flex-1 flex flex-col min-w-0 bg-white transition-transform duration-300 ease-in-out z-10 md:z-auto ${
-					isPanelOpen ? "translate-x-0" : "translate-x-full md:translate-x-0 md:hidden"
+					isPanelOpen ? "translate-x-0" : "translate-x-full md:translate-x-0"
 				}`}
 			>
-				{isPanelOpen && (
-					<div className="flex-1 flex flex-col min-w-0 overflow-hidden w-full h-full">
-						{isComposing && !selectedEmailId ? (
+				<div className="flex-1 flex flex-col min-w-0 overflow-hidden w-full h-full">
+					{isComposing && !selectedEmailId ? (
+						<ComposePanel />
+					) : isComposing && selectedEmailId ? (
+						<div className="flex flex-col h-full overflow-y-auto">
 							<ComposePanel />
-						) : isComposing && selectedEmailId ? (
-							<div className="flex flex-col h-full overflow-y-auto">
-								<ComposePanel />
-								<div className="border-t border-slate-200">
-									<EmailPanel emailId={selectedEmailId} />
-								</div>
+							<div className="border-t border-slate-200">
+								<EmailPanel emailId={selectedEmailId} />
 							</div>
-						) : selectedEmailId ? (
-							<EmailPanel emailId={selectedEmailId} />
-						) : (
-							<div className="flex-1 flex flex-col items-center justify-center relative bg-gradient-to-br from-white via-[#314158]/5 to-[#314158]/15 w-full h-full overflow-hidden">
-								{/* Faded background watermark */}
-								<div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
-									<span className="text-[12rem] font-bold text-[#314158] opacity-5 tracking-tighter">
-										Epistle
-									</span>
-								</div>
-								
-								{/* Foreground content */}
-								<div className="relative z-10 flex flex-col items-center justify-center gap-2 pointer-events-none select-none">
-									<h2 className="text-4xl font-bold text-[#314158] tracking-tight">
-										Epistle
-									</h2>
-									<p className="text-sm font-medium text-slate-500">
-										Select a message to get started
-									</p>
-								</div>
+						</div>
+					) : selectedEmailId ? (
+						<EmailPanel emailId={selectedEmailId} />
+					) : (
+						<div className="flex-1 flex flex-col items-center justify-center relative bg-gradient-to-br from-indigo-50 via-slate-50 to-cyan-50 w-full h-full overflow-hidden hidden md:flex">
+							{/* Faded background watermark */}
+							<div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
+								<span className="text-[12rem] font-bold text-slate-200/50 tracking-tighter">
+									Epistle
+								</span>
 							</div>
-						)}
-					</div>
-				)}
+							
+							{/* Foreground content */}
+							<div className="relative z-10 flex flex-col items-center justify-center gap-2 pointer-events-none select-none">
+								<h2 className="text-4xl font-bold text-slate-300 tracking-tight">
+									Epistle
+								</h2>
+								<p className="text-sm font-medium text-slate-400">
+									Select a message to get started
+								</p>
+							</div>
+						</div>
+					)}
+				</div>
 			</div>
 		</div>
 	);
