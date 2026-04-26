@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useParams } from "react-router";
 import { Button, Input, useKumoToastManager, Dialog } from "@cloudflare/kumo";
 import { useEvents, useCreateEvent, useDeleteEvent, useUpdateEvent } from "~/queries/calendar";
@@ -106,7 +107,11 @@ export default function CalendarRoute() {
 	
 	const [isNewEventOpen, setIsNewEventOpen] = useState(false);
 	const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+	const [eventToDelete, setEventToDelete] = useState<CalendarEvent | null>(null);
 	const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+
+	const [mounted, setMounted] = useState(false);
+	useEffect(() => setMounted(true), []);
 
 	const nextRange = () => {
 		if (view === 'day') setCurrentDate(addDays(currentDate, 1));
@@ -164,7 +169,8 @@ export default function CalendarRoute() {
 		if (!mailboxId) return;
 		try {
 			await deleteEventMutation.mutateAsync({ mailboxId, id });
-			setSelectedEvent(null);
+			if (selectedEvent?.id === id) setSelectedEvent(null);
+			setEventToDelete(null);
 			toastManager.add({ title: "Event deleted successfully!" });
 		} catch (err) {
 			const message = (err instanceof Error ? err.message : null) || "Failed to delete event.";
@@ -255,7 +261,7 @@ export default function CalendarRoute() {
 												setIsEditEventOpen(true);
 											}}
 											onDelete={() => {
-												setSelectedEvent(event);
+												setEventToDelete(event);
 												setIsDeleteConfirmOpen(true);
 											}}
 										/>
@@ -407,61 +413,66 @@ export default function CalendarRoute() {
 		</div>
 	</div>
 
-	{/* Side Panel for Event Details (Sheet) */}
-	{selectedEvent && (
-		<div className="fixed inset-0 z-[100] overflow-hidden" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
-			<div className="absolute inset-0 bg-black/30 transition-opacity" onClick={() => setSelectedEvent(null)} />
-			<div className="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
-				<div className="pointer-events-auto w-screen max-w-sm">
-					<div className="flex h-full flex-col overflow-y-auto bg-white shadow-xl border-l border-kumo-line animate-in slide-in-from-right-full duration-300">
-						<div className="p-4 border-b border-kumo-line flex items-center justify-between">
-							<h2 className="font-semibold text-kumo-default">Event Details</h2>
-							<Button variant="ghost" size="sm" shape="square" icon={<XIcon />} onClick={() => setSelectedEvent(null)} aria-label="Close" />
-						</div>
-						<div className="p-6 space-y-6 flex-1">
-							<div>
-								<h3 className="text-2xl font-bold text-kumo-default tracking-tight">{selectedEvent.title}</h3>
-								<div className="flex items-center gap-2 text-kumo-subtle mt-3 text-sm font-medium">
-									<ClockIcon size={18} />
-									<span>
-										{formatDateTime(new Date(selectedEvent.start_at))} - {formatDateTime(new Date(selectedEvent.end_at))}
-									</span>
+	{mounted ? createPortal(
+		<>
+			{/* Side Panel for Event Details (Sheet) */}
+			{selectedEvent && (
+				<div className="fixed inset-0 z-[100] overflow-hidden" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
+					<div className="absolute inset-0 bg-black/30 transition-opacity" onClick={() => setSelectedEvent(null)} />
+					<div className="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
+						<div className="pointer-events-auto w-screen max-w-sm">
+							<div className="flex h-full flex-col overflow-y-auto bg-white shadow-xl border-l border-kumo-line animate-in slide-in-from-right-full duration-300">
+								<div className="p-4 border-b border-kumo-line flex items-center justify-between">
+									<h2 className="font-semibold text-kumo-default">Event Details</h2>
+									<Button variant="ghost" size="sm" shape="square" icon={<XIcon />} onClick={() => setSelectedEvent(null)} aria-label="Close" />
+								</div>
+								<div className="p-6 space-y-6 flex-1">
+									<div>
+										<div className="flex items-start justify-between gap-4">
+											<h3 className="text-2xl font-bold text-kumo-default tracking-tight break-words">{selectedEvent.title}</h3>
+											<EventMenu 
+												onEdit={() => {
+													setEditEvent({...selectedEvent});
+													setSelectedEvent(null);
+													setIsEditEventOpen(true);
+												}}
+												onDelete={() => {
+													setEventToDelete(selectedEvent);
+													setSelectedEvent(null);
+													setIsDeleteConfirmOpen(true);
+												}}
+											/>
+										</div>
+										<div className="flex items-center gap-2 text-kumo-subtle mt-3 text-sm font-medium">
+											<ClockIcon size={18} />
+											<span>
+												{formatDateTime(new Date(selectedEvent.start_at))} - {formatDateTime(new Date(selectedEvent.end_at))}
+											</span>
+										</div>
+									</div>
+									{selectedEvent.description && (
+										<div className="pt-6 border-t border-kumo-line">
+											<h4 className="text-xs font-bold text-kumo-strong uppercase tracking-wider mb-3">Description</h4>
+											<p className="text-sm text-kumo-default whitespace-pre-wrap leading-relaxed">{selectedEvent.description}</p>
+										</div>
+									)}
 								</div>
 							</div>
-							{selectedEvent.description && (
-								<div className="pt-6 border-t border-kumo-line">
-									<h4 className="text-xs font-bold text-kumo-strong uppercase tracking-wider mb-3">Description</h4>
-									<p className="text-sm text-kumo-default whitespace-pre-wrap leading-relaxed">{selectedEvent.description}</p>
-								</div>
-							)}
-						</div>
-						<div className="p-4 border-t border-kumo-line bg-kumo-base/50 flex gap-2">
-							<Button variant="secondary" className="flex-1" onClick={() => {
-								setEditEvent({...selectedEvent});
-								setIsEditEventOpen(true);
-							}}>
-								Edit
-							</Button>
-							<Button variant="destructive" className="flex-1" onClick={() => setIsDeleteConfirmOpen(true)}>
-								Delete
-							</Button>
 						</div>
 					</div>
 				</div>
-			</div>
-		</div>
-	)}
+			)}
 
-	{/* Delete Confirmation Modal */}
-	<Dialog.Root open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+			{/* Delete Confirmation Modal */}
+			<Dialog.Root open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
 				<Dialog size="sm" className="p-6">
 					<Dialog.Title className="text-lg font-bold text-kumo-default mb-2">Delete Event</Dialog.Title>
 					<p className="text-sm text-kumo-subtle mb-6">Are you sure you want to delete this event? This action cannot be undone.</p>
 					<div className="flex justify-end gap-2">
 						<Button variant="secondary" onClick={() => setIsDeleteConfirmOpen(false)}>Cancel</Button>
 						<Button variant="destructive" loading={deleteEventMutation.isPending} onClick={async () => {
-							if (selectedEvent) {
-								await handleDeleteEvent(selectedEvent.id);
+							if (eventToDelete) {
+								await handleDeleteEvent(eventToDelete.id);
 								setIsDeleteConfirmOpen(false);
 							}
 						}}>Delete</Button>
@@ -568,6 +579,9 @@ export default function CalendarRoute() {
 					)}
 				</Dialog>
 			</Dialog.Root>
+		</>,
+		document.body
+	) : null}
 		</>
 	);
 }
