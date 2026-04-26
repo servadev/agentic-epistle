@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useParams } from "react-router";
-import { Button, Input, Tooltip, useKumoToastManager } from "@cloudflare/kumo";
-import { useEvents, useCreateEvent, useDeleteEvent } from "~/queries/calendar";
-import { CaretLeftIcon, CaretRightIcon, CalendarPlusIcon, XIcon, ClockIcon } from "@phosphor-icons/react";
+import { Button, Input, useKumoToastManager, Dialog } from "@cloudflare/kumo";
+import { useEvents, useCreateEvent, useDeleteEvent, useUpdateEvent } from "~/queries/calendar";
+import { CaretLeftIcon, CaretRightIcon, CalendarPlusIcon, XIcon, ClockIcon, DotsThreeIcon } from "@phosphor-icons/react";
 import type { CalendarEvent } from "~/types";
 import {
 	startOfWeek,
@@ -19,6 +19,62 @@ import {
 	formatDayNum,
 	formatDateTime,
 } from "shared/dates";
+
+function EventMenu({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void }) {
+	const [open, setOpen] = useState(false);
+	const ref = useRef<HTMLDivElement>(null);
+
+	useEffect(() => {
+		if (!open) return;
+		const handler = (e: MouseEvent) => {
+			if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+		};
+		document.addEventListener("mousedown", handler);
+		return () => document.removeEventListener("mousedown", handler);
+	}, [open]);
+
+	return (
+		<div ref={ref} className="relative" onClick={(e) => e.stopPropagation()}>
+			<Button
+				variant="ghost"
+				shape="square"
+				size="sm"
+				icon={<DotsThreeIcon size={16} />}
+				onClick={(e) => {
+					e.stopPropagation();
+					setOpen((o) => !o);
+				}}
+				aria-label="Event options"
+			/>
+			{open && (
+				<div className="absolute top-full right-0 z-50 mt-1 w-32 rounded-lg border border-kumo-line bg-white shadow-lg py-1">
+					<button
+						type="button"
+						className="w-full text-left px-3 py-1.5 text-sm text-slate-900 hover:bg-slate-50 transition-colors"
+						onClick={(e) => {
+							e.stopPropagation();
+							setOpen(false);
+							onEdit();
+						}}
+					>
+						Edit
+					</button>
+					<button
+						type="button"
+						className="w-full text-left px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+						onClick={(e) => {
+							e.stopPropagation();
+							setOpen(false);
+							onDelete();
+						}}
+					>
+						Delete
+					</button>
+				</div>
+			)}
+		</div>
+	);
+}
 
 export default function CalendarRoute() {
 	const { mailboxId } = useParams<{ mailboxId: string }>();
@@ -46,7 +102,7 @@ export default function CalendarRoute() {
 		endStr = endOfDay(addDays(startOfWeek(monthEnd), 6)).toISOString();
 	}
 
-	const { data: events = [], isLoading } = useEvents(mailboxId, { start: startStr, end: endStr });
+	const { data: events = [] } = useEvents(mailboxId, { start: startStr, end: endStr });
 	
 	const [isNewEventOpen, setIsNewEventOpen] = useState(false);
 	const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
@@ -66,10 +122,13 @@ export default function CalendarRoute() {
 
 	const createEventMutation = useCreateEvent();
 	const deleteEventMutation = useDeleteEvent();
+	const updateEventMutation = useUpdateEvent();
 
 	const [newEvent, setNewEvent] = useState({ title: "", start_at: "", end_at: "", description: "" });
+	const [isEditEventOpen, setIsEditEventOpen] = useState(false);
+	const [editEvent, setEditEvent] = useState<CalendarEvent | null>(null);
 
-	const handleCreateEvent = async (e: React.FormEvent) => {
+	const handleCreateEvent = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		if (!mailboxId) return;
 		
@@ -113,6 +172,42 @@ export default function CalendarRoute() {
 		}
 	};
 
+	const handleUpdateEvent = async (e: React.FormEvent<HTMLFormElement>) => {
+		e.preventDefault();
+		if (!mailboxId || !editEvent) return;
+
+		if (!editEvent.title.trim()) {
+			toastManager.add({ title: 'Title is required', variant: 'error' });
+			return;
+		}
+
+		if (new Date(editEvent.start_at).getTime() >= new Date(editEvent.end_at).getTime()) {
+			toastManager.add({ title: 'Start time must be before end time', variant: 'error' });
+			return;
+		}
+
+		try {
+			await updateEventMutation.mutateAsync({
+				mailboxId,
+				id: editEvent.id,
+				event: {
+					title: editEvent.title,
+					start_at: new Date(editEvent.start_at).toISOString(),
+					end_at: new Date(editEvent.end_at).toISOString(),
+					description: editEvent.description,
+				}
+			});
+			setIsEditEventOpen(false);
+			if (selectedEvent?.id === editEvent.id) {
+				setSelectedEvent({ ...selectedEvent, ...editEvent });
+			}
+			toastManager.add({ title: "Event updated successfully!" });
+		} catch (err) {
+			const message = (err instanceof Error ? err.message : null) || "Failed to update event.";
+			toastManager.add({ title: message, variant: "error" });
+		}
+	};
+
 	const hours = Array.from({ length: 24 }, (_, i) => i);
 	let days: Date[] = [];
 	if (view === 'day') {
@@ -132,9 +227,10 @@ export default function CalendarRoute() {
 	}
 
 	return (
-		<div className="flex h-full overflow-hidden bg-kumo-base relative">
-			{/* Column 2: Agenda List */}
-			<div className="hidden lg:flex flex-col w-[350px] shrink-0 border-r border-kumo-line bg-white z-10">
+		<>
+			<div className="flex h-full overflow-hidden bg-kumo-base relative">
+				{/* Column 2: Agenda List */}
+				<div className="hidden lg:flex flex-col w-[350px] shrink-0 border-r border-kumo-line bg-white z-10">
 				<div className="px-4 py-3.5 border-b border-kumo-line shrink-0 flex items-center justify-between">
 					<h1 className="text-lg font-bold text-slate-900 tracking-tight">Agenda</h1>
 				</div>
@@ -151,8 +247,20 @@ export default function CalendarRoute() {
 									onClick={() => setSelectedEvent(event)}
 									className="p-3 rounded-lg border border-kumo-line bg-kumo-base hover:bg-kumo-tint cursor-pointer transition-colors"
 								>
-									<div className="text-sm font-semibold text-kumo-default truncate">{event.title}</div>
-									<div className="text-xs text-kumo-subtle mt-1.5 flex items-center gap-1.5">
+									<div className="flex items-start justify-between gap-2">
+										<div className="text-sm font-semibold text-kumo-default truncate pt-1">{event.title}</div>
+										<EventMenu 
+											onEdit={() => {
+												setEditEvent({ ...event });
+												setIsEditEventOpen(true);
+											}}
+											onDelete={() => {
+												setSelectedEvent(event);
+												setIsDeleteConfirmOpen(true);
+											}}
+										/>
+									</div>
+									<div className="text-xs text-kumo-subtle mt-0.5 flex items-center gap-1.5">
 										<ClockIcon size={14} />
 										<span>{formatShortTime(new Date(event.start_at))} - {formatShortTime(new Date(event.end_at))}</span>
 									</div>
@@ -295,90 +403,150 @@ export default function CalendarRoute() {
 						</>
 					)}
 				</div>
+			</div>
+		</div>
+	</div>
 
-				{/* Side Panel for Event Details */}
-				{selectedEvent && (
-					<div className="w-80 border-l border-kumo-line bg-kumo-base shrink-0 flex flex-col animate-in slide-in-from-right-4">
+	{/* Side Panel for Event Details (Sheet) */}
+	{selectedEvent && (
+		<div className="fixed inset-0 z-[100] overflow-hidden" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
+			<div className="absolute inset-0 bg-black/30 transition-opacity" onClick={() => setSelectedEvent(null)} />
+			<div className="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
+				<div className="pointer-events-auto w-screen max-w-sm">
+					<div className="flex h-full flex-col overflow-y-auto bg-white shadow-xl border-l border-kumo-line animate-in slide-in-from-right-full duration-300">
 						<div className="p-4 border-b border-kumo-line flex items-center justify-between">
 							<h2 className="font-semibold text-kumo-default">Event Details</h2>
 							<Button variant="ghost" size="sm" shape="square" icon={<XIcon />} onClick={() => setSelectedEvent(null)} aria-label="Close" />
 						</div>
-						<div className="p-4 space-y-4 flex-1 overflow-y-auto">
+						<div className="p-6 space-y-6 flex-1">
 							<div>
-								<h3 className="text-lg font-medium text-kumo-default">{selectedEvent.title}</h3>
-								<div className="flex items-center gap-2 text-kumo-subtle mt-2 text-sm">
-									<ClockIcon />
+								<h3 className="text-2xl font-bold text-kumo-default tracking-tight">{selectedEvent.title}</h3>
+								<div className="flex items-center gap-2 text-kumo-subtle mt-3 text-sm font-medium">
+									<ClockIcon size={18} />
 									<span>
 										{formatDateTime(new Date(selectedEvent.start_at))} - {formatDateTime(new Date(selectedEvent.end_at))}
 									</span>
 								</div>
 							</div>
 							{selectedEvent.description && (
-								<div className="pt-4 border-t border-kumo-line">
-									<h4 className="text-xs font-medium text-kumo-strong uppercase mb-2">Description</h4>
-									<p className="text-sm text-kumo-default whitespace-pre-wrap">{selectedEvent.description}</p>
+								<div className="pt-6 border-t border-kumo-line">
+									<h4 className="text-xs font-bold text-kumo-strong uppercase tracking-wider mb-3">Description</h4>
+									<p className="text-sm text-kumo-default whitespace-pre-wrap leading-relaxed">{selectedEvent.description}</p>
 								</div>
 							)}
 						</div>
-						<div className="p-4 border-t border-kumo-line">
-							<Button variant="destructive" className="w-full" onClick={() => setIsDeleteConfirmOpen(true)}>
-								Delete Event
-							</Button>
-						</div>
-					</div>
-				)}
-			</div>
-
-			{/* Delete Confirmation Modal */}
-			{isDeleteConfirmOpen && selectedEvent && (
-				<div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-					<div className="bg-kumo-base rounded-lg shadow-lg w-full max-w-sm overflow-hidden flex flex-col p-6">
-						<h2 className="text-lg font-semibold text-kumo-default mb-2">Delete Event</h2>
-						<p className="text-kumo-subtle text-sm mb-6">
-							Are you sure you want to delete "{selectedEvent.title}"? This action cannot be undone.
-						</p>
-						<div className="flex justify-end gap-3">
-							<Button variant="secondary" onClick={() => setIsDeleteConfirmOpen(false)}>Cancel</Button>
-							<Button variant="destructive" loading={deleteEventMutation.isPending} onClick={async () => {
-								await handleDeleteEvent(selectedEvent.id);
-								setIsDeleteConfirmOpen(false);
+						<div className="p-4 border-t border-kumo-line bg-kumo-base/50 flex gap-2">
+							<Button variant="secondary" className="flex-1" onClick={() => {
+								setEditEvent({...selectedEvent});
+								setIsEditEventOpen(true);
 							}}>
+								Edit
+							</Button>
+							<Button variant="destructive" className="flex-1" onClick={() => setIsDeleteConfirmOpen(true)}>
 								Delete
 							</Button>
 						</div>
 					</div>
 				</div>
-			)}
+			</div>
+		</div>
+	)}
 
-			{/* New Event Modal (Simple overlay) */}
-			{isNewEventOpen && (
-				<div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-					<div className="bg-kumo-base rounded-lg shadow-lg w-full max-w-md overflow-hidden flex flex-col">
-						<div className="p-4 border-b border-kumo-line flex items-center justify-between">
-							<h2 className="font-semibold text-kumo-default">New Event</h2>
-							<Button variant="ghost" size="sm" shape="square" icon={<XIcon />} onClick={() => setIsNewEventOpen(false)} aria-label="Close" />
+	{/* Delete Confirmation Modal */}
+	<Dialog.Root open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+				<Dialog size="sm" className="p-6">
+					<Dialog.Title className="text-lg font-bold text-kumo-default mb-2">Delete Event</Dialog.Title>
+					<p className="text-sm text-kumo-subtle mb-6">Are you sure you want to delete this event? This action cannot be undone.</p>
+					<div className="flex justify-end gap-2">
+						<Button variant="secondary" onClick={() => setIsDeleteConfirmOpen(false)}>Cancel</Button>
+						<Button variant="destructive" loading={deleteEventMutation.isPending} onClick={async () => {
+							if (selectedEvent) {
+								await handleDeleteEvent(selectedEvent.id);
+								setIsDeleteConfirmOpen(false);
+							}
+						}}>Delete</Button>
+					</div>
+				</Dialog>
+			</Dialog.Root>
+
+			{/* New Event Modal */}
+			<Dialog.Root open={isNewEventOpen} onOpenChange={setIsNewEventOpen}>
+				<Dialog size="base" className="p-0">
+					<div className="p-4 border-b border-kumo-line flex items-center justify-between">
+						<Dialog.Title className="font-semibold text-kumo-default">New Event</Dialog.Title>
+						<Button variant="ghost" size="sm" shape="square" icon={<XIcon />} onClick={() => setIsNewEventOpen(false)} aria-label="Close" />
+					</div>
+					<form onSubmit={handleCreateEvent} className="p-4 space-y-4">
+						<Input 
+							label="Title" 
+							required 
+							value={newEvent.title} 
+							onChange={e => setNewEvent({...newEvent, title: e.target.value})} 
+						/>
+						<div className="grid grid-cols-2 gap-4">
+							<Input 
+								label="Start" 
+								type="datetime-local" 
+								required 
+								value={newEvent.start_at} 
+								onChange={e => setNewEvent({...newEvent, start_at: e.target.value})} 
+							/>
+							<Input 
+								label="End" 
+								type="datetime-local" 
+								required 
+								value={newEvent.end_at} 
+								onChange={e => setNewEvent({...newEvent, end_at: e.target.value})} 
+							/>
 						</div>
-						<form onSubmit={handleCreateEvent} className="p-4 space-y-4">
+						<div>
+							<label className="block text-sm font-medium text-kumo-default mb-1">Description</label>
+							<textarea 
+								className="w-full rounded-md border border-kumo-line bg-kumo-base px-3 py-2 text-sm text-kumo-default focus:border-kumo-brand focus:outline-none focus:ring-1 focus:ring-kumo-brand resize-none"
+								rows={3}
+								value={newEvent.description}
+								onChange={e => setNewEvent({...newEvent, description: e.target.value})}
+							/>
+						</div>
+						<div className="pt-4 flex justify-end gap-2">
+							<Button type="button" variant="secondary" onClick={() => setIsNewEventOpen(false)}>Cancel</Button>
+							<Button variant="primary" type="submit" disabled={createEventMutation.isPending}>
+								{createEventMutation.isPending ? "Saving..." : "Save"}
+							</Button>
+						</div>
+					</form>
+				</Dialog>
+			</Dialog.Root>
+
+			{/* Edit Event Modal */}
+			<Dialog.Root open={isEditEventOpen} onOpenChange={setIsEditEventOpen}>
+				<Dialog size="base" className="p-0">
+					<div className="p-4 border-b border-kumo-line flex items-center justify-between">
+						<Dialog.Title className="font-semibold text-kumo-default">Edit Event</Dialog.Title>
+						<Button variant="ghost" size="sm" shape="square" icon={<XIcon />} onClick={() => setIsEditEventOpen(false)} aria-label="Close" />
+					</div>
+					{editEvent && (
+						<form onSubmit={handleUpdateEvent} className="p-4 space-y-4">
 							<Input 
 								label="Title" 
 								required 
-								value={newEvent.title} 
-								onChange={e => setNewEvent({...newEvent, title: e.target.value})} 
+								value={editEvent.title} 
+								onChange={e => setEditEvent({...editEvent, title: e.target.value})} 
 							/>
 							<div className="grid grid-cols-2 gap-4">
 								<Input 
 									label="Start" 
 									type="datetime-local" 
 									required 
-									value={newEvent.start_at} 
-									onChange={e => setNewEvent({...newEvent, start_at: e.target.value})} 
+									value={editEvent.start_at ? new Date(editEvent.start_at).toISOString().slice(0, 16) : ""} 
+									onChange={e => setEditEvent({...editEvent, start_at: e.target.value})} 
 								/>
 								<Input 
 									label="End" 
 									type="datetime-local" 
 									required 
-									value={newEvent.end_at} 
-									onChange={e => setNewEvent({...newEvent, end_at: e.target.value})} 
+									value={editEvent.end_at ? new Date(editEvent.end_at).toISOString().slice(0, 16) : ""} 
+									onChange={e => setEditEvent({...editEvent, end_at: e.target.value})} 
 								/>
 							</div>
 							<div>
@@ -386,21 +554,20 @@ export default function CalendarRoute() {
 								<textarea 
 									className="w-full rounded-md border border-kumo-line bg-kumo-base px-3 py-2 text-sm text-kumo-default focus:border-kumo-brand focus:outline-none focus:ring-1 focus:ring-kumo-brand resize-none"
 									rows={3}
-									value={newEvent.description}
-									onChange={e => setNewEvent({...newEvent, description: e.target.value})}
+									value={editEvent.description || ""}
+									onChange={e => setEditEvent({...editEvent, description: e.target.value})}
 								/>
 							</div>
 							<div className="pt-4 flex justify-end gap-2">
-								<Button variant="secondary" onClick={() => setIsNewEventOpen(false)}>Cancel</Button>
-								<Button variant="primary" type="submit" disabled={createEventMutation.isPending}>
-									{createEventMutation.isPending ? "Saving..." : "Save"}
+								<Button type="button" variant="secondary" onClick={() => setIsEditEventOpen(false)}>Cancel</Button>
+								<Button variant="primary" type="submit" disabled={updateEventMutation.isPending}>
+									{updateEventMutation.isPending ? "Saving..." : "Save Changes"}
 								</Button>
 							</div>
 						</form>
-					</div>
-				</div>
-			)}
-			</div>
-		</div>
+					)}
+				</Dialog>
+			</Dialog.Root>
+		</>
 	);
 }

@@ -88,6 +88,7 @@ export const useUIStore = create<UIState>((set, get) => ({
 		set({
 			composeOptions: options || { mode: "new", originalEmail: null },
 			isComposeModalOpen: true,
+			isSidebarOpen: false,
 		}),
 
 	closeComposeModal: () =>

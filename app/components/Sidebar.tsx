@@ -16,7 +16,7 @@ import {
 	UsersIcon,
 } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
-import { NavLink, useNavigate, useParams } from "react-router";
+import { NavLink, useLocation, useNavigate, useParams } from "react-router";
 import { Folders, SYSTEM_FOLDER_IDS } from "shared/folders";
 import { useCreateFolder, useFolders } from "~/queries/folders";
 import { useMailbox } from "~/queries/mailboxes";
@@ -85,10 +85,11 @@ export default function Sidebar() {
 	const navigate = useNavigate();
 	const { data: folders = [] } = useFolders(mailboxId);
 	const createFolderMutation = useCreateFolder();
-	const { startCompose, closeSidebar, isSidebarOpen, openSidebar } = useUIStore();
+	const { startCompose, openComposeModal, closeSidebar, isSidebarOpen, openSidebar } = useUIStore();
 	const { data: currentMailbox } = useMailbox(mailboxId);
 	const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
 	const [newFolderName, setNewFolderName] = useState("");
+	const location = useLocation();
 
 	const isCollapsed = !isSidebarOpen;
 
@@ -165,7 +166,13 @@ export default function Sidebar() {
 				<Button
 					variant="primary"
 					icon={<PencilSimpleIcon size={16} />}
-					onClick={() => startCompose()}
+					onClick={() => {
+						if (location.pathname.includes("/emails/") || location.pathname.includes("/search")) {
+							startCompose();
+						} else {
+							openComposeModal();
+						}
+					}}
 					className={`bg-slate-700 hover:bg-slate-800 text-white shadow-md border-0 ${
 						isCollapsed ? "w-full md:w-12 md:h-12 md:p-0 md:justify-center md:rounded-full lg:w-full lg:h-auto lg:p-2 lg:justify-start lg:rounded-md" : "w-full"
 					}`}
