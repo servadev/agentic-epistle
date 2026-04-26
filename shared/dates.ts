@@ -166,7 +166,7 @@ export function formatShortTime(d: Date): string {
 }
 
 export function formatMonthYear(d: Date): string {
-	return d.toLocaleDateString([], { month: "long", year: "numeric" });
+	return d.toLocaleDateString([], { month: "short", year: "numeric" });
 }
 
 export function formatDayName(d: Date): string {

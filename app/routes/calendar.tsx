@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useParams } from "react-router";
-import { Button, Input, useKumoToastManager, Dialog } from "@cloudflare/kumo";
+import { Button, Input, useKumoToastManager } from "@cloudflare/kumo";
 import { useEvents, useCreateEvent, useDeleteEvent, useUpdateEvent } from "~/queries/calendar";
 import { CaretLeftIcon, CaretRightIcon, CalendarPlusIcon, XIcon, ClockIcon, DotsThreeIcon } from "@phosphor-icons/react";
 import type { CalendarEvent } from "~/types";
@@ -285,9 +285,14 @@ export default function CalendarRoute() {
 			{/* Column 3: Calendar */}
 			<div className="flex flex-1 flex-col min-w-0 bg-kumo-base relative z-0">
 				{/* Header */}
-				<div className="flex items-center justify-between px-4 py-3 border-b border-kumo-line shrink-0">
-				<div className="flex items-center gap-4">
-					<h1 className="text-lg font-semibold text-kumo-default">Calendar</h1>
+			<div className="flex flex-col gap-3 px-4 py-3 border-b border-kumo-line shrink-0">
+				<div className="flex items-center justify-between">
+					<h1 className="text-lg font-semibold text-kumo-default">{formatMonthYear(currentDate)}</h1>
+					<Button variant="primary" icon={<CalendarPlusIcon size={16} />} onClick={() => setIsNewEventOpen(true)}>
+						<span className="hidden sm:inline">New event</span>
+					</Button>
+				</div>
+				<div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4">
 					<div className="flex items-center gap-1 bg-kumo-control rounded-md p-0.5">
 						<Button variant="ghost" size="sm" onClick={prevRange} icon={<CaretLeftIcon size={16} />} aria-label="Previous" />
 						<Button variant="ghost" size="sm" onClick={today}>Today</Button>
@@ -298,13 +303,7 @@ export default function CalendarRoute() {
 						<Button variant="ghost" size="sm" onClick={() => setView('week')} className={view === 'week' ? 'bg-kumo-base shadow-sm' : ''}>Week</Button>
 						<Button variant="ghost" size="sm" onClick={() => setView('month')} className={view === 'month' ? 'bg-kumo-base shadow-sm' : ''}>Month</Button>
 					</div>
-					<span className="text-sm font-medium text-kumo-strong">
-						{formatMonthYear(currentDate)}
-					</span>
 				</div>
-				<Button variant="primary" icon={<CalendarPlusIcon size={16} />} onClick={() => setIsNewEventOpen(true)}>
-					New event
-				</Button>
 			</div>
 
 			{/* Main Grid */}
@@ -349,11 +348,11 @@ export default function CalendarRoute() {
 					) : (
 						<>
 							{/* Days Header */}
-							<div className="flex border-b border-kumo-line sticky top-0 bg-kumo-base z-10 shrink-0 ml-12">
+							<div className="flex border-b border-kumo-line sticky top-0 bg-kumo-base z-10 shrink-0 ml-10 sm:ml-12">
 								{days.map((day, i) => (
-									<div key={i} className="flex-1 min-w-0 border-l border-kumo-line py-2 text-center">
-										<div className="text-xs text-kumo-subtle uppercase tracking-wider">{formatDayName(day)}</div>
-										<div className={`text-lg font-medium mt-0.5 ${isSameDay(day, new Date()) ? 'text-kumo-brand bg-kumo-brand/10 w-8 h-8 rounded-full flex items-center justify-center mx-auto' : 'text-kumo-default'}`}>
+									<div key={i} className="flex-1 min-w-[40px] sm:min-w-[100px] border-l border-kumo-line py-2 text-center">
+										<div className="text-[10px] sm:text-xs text-kumo-subtle uppercase tracking-wider">{formatDayName(day)}</div>
+										<div className={`text-base sm:text-lg font-medium mt-0.5 ${isSameDay(day, new Date()) ? 'text-kumo-brand bg-kumo-brand/10 w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center mx-auto' : 'text-kumo-default'}`}>
 											{formatDayNum(day)}
 										</div>
 									</div>
@@ -361,11 +360,11 @@ export default function CalendarRoute() {
 							</div>
 
 							{/* Time Grid */}
-							<div className="flex flex-1 relative">
+							<div className="flex flex-1 relative w-full">
 								{/* Time labels */}
-								<div className="w-12 shrink-0 border-r border-kumo-line bg-kumo-base sticky left-0 z-10 flex flex-col">
+								<div className="w-10 sm:w-12 shrink-0 border-r border-kumo-line bg-kumo-base sticky left-0 z-10 flex flex-col">
 									{hours.map(hour => (
-										<div key={hour} className="h-16 border-b border-kumo-line flex items-start justify-center pt-1 text-xs text-kumo-subtle">
+										<div key={hour} className="h-16 border-b border-kumo-line flex items-start justify-center pt-1 text-[10px] sm:text-xs text-kumo-subtle">
 											{hour === 0 ? "12 AM" : hour < 12 ? `${hour} AM` : hour === 12 ? "12 PM" : `${hour - 12} PM`}
 										</div>
 									))}
@@ -374,7 +373,7 @@ export default function CalendarRoute() {
 								{/* Grid Cells & Events */}
 								<div className="flex-1 flex relative">
 									{days.map((day, dayIdx) => (
-										<div key={dayIdx} className="flex-1 border-r border-kumo-line relative min-w-[100px]">
+										<div key={dayIdx} className="flex-1 border-r border-kumo-line relative min-w-[40px] sm:min-w-[100px]">
 											{hours.map(hour => (
 												<div key={hour} className="h-16 border-b border-kumo-line" />
 											))}
@@ -464,100 +463,55 @@ export default function CalendarRoute() {
 			)}
 
 			{/* Delete Confirmation Modal */}
-			<Dialog.Root open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
-				<Dialog size="sm" className="p-6">
-					<Dialog.Title className="text-lg font-bold text-kumo-default mb-2">Delete Event</Dialog.Title>
-					<p className="text-sm text-kumo-subtle mb-6">Are you sure you want to delete this event? This action cannot be undone.</p>
-					<div className="flex justify-end gap-2">
-						<Button variant="secondary" onClick={() => setIsDeleteConfirmOpen(false)}>Cancel</Button>
-						<Button variant="destructive" loading={deleteEventMutation.isPending} onClick={async () => {
-							if (eventToDelete) {
-								await handleDeleteEvent(eventToDelete.id);
-								setIsDeleteConfirmOpen(false);
-							}
-						}}>Delete</Button>
+			{isDeleteConfirmOpen && (
+				<div className="fixed inset-0 z-[100] flex items-center justify-center p-4" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+					<div className="absolute inset-0 bg-black/30 transition-opacity" onClick={() => setIsDeleteConfirmOpen(false)} />
+					<div className="relative bg-white rounded-lg shadow-xl w-full max-w-sm pointer-events-auto p-6 animate-in fade-in zoom-in-95 duration-200">
+						<h2 className="text-lg font-bold text-kumo-default mb-2">Delete Event</h2>
+						<p className="text-sm text-kumo-subtle mb-6">Are you sure you want to delete this event? This action cannot be undone.</p>
+						<div className="flex justify-end gap-2">
+							<Button variant="secondary" onClick={() => setIsDeleteConfirmOpen(false)}>Cancel</Button>
+							<Button variant="destructive" loading={deleteEventMutation.isPending} onClick={async () => {
+								if (eventToDelete) {
+									await handleDeleteEvent(eventToDelete.id);
+									setIsDeleteConfirmOpen(false);
+								}
+							}}>Delete</Button>
+						</div>
 					</div>
-				</Dialog>
-			</Dialog.Root>
+				</div>
+			)}
 
 			{/* New Event Modal */}
-			<Dialog.Root open={isNewEventOpen} onOpenChange={setIsNewEventOpen}>
-				<Dialog size="base" className="p-0">
-					<div className="p-4 border-b border-kumo-line flex items-center justify-between">
-						<Dialog.Title className="font-semibold text-kumo-default">New Event</Dialog.Title>
-						<Button variant="ghost" size="sm" shape="square" icon={<XIcon />} onClick={() => setIsNewEventOpen(false)} aria-label="Close" />
-					</div>
-					<form onSubmit={handleCreateEvent} className="p-4 space-y-4">
-						<Input 
-							label="Title" 
-							required 
-							value={newEvent.title} 
-							onChange={e => setNewEvent({...newEvent, title: e.target.value})} 
-						/>
-						<div className="grid grid-cols-2 gap-4">
-							<Input 
-								label="Start" 
-								type="datetime-local" 
-								required 
-								value={newEvent.start_at} 
-								onChange={e => setNewEvent({...newEvent, start_at: e.target.value})} 
-							/>
-							<Input 
-								label="End" 
-								type="datetime-local" 
-								required 
-								value={newEvent.end_at} 
-								onChange={e => setNewEvent({...newEvent, end_at: e.target.value})} 
-							/>
+			{isNewEventOpen && (
+				<div className="fixed inset-0 z-[100] flex items-center justify-center p-4" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+					<div className="absolute inset-0 bg-black/30 transition-opacity" onClick={() => setIsNewEventOpen(false)} />
+					<div className="relative bg-white rounded-lg shadow-xl w-full max-w-md pointer-events-auto animate-in fade-in zoom-in-95 duration-200">
+						<div className="p-4 border-b border-kumo-line flex items-center justify-between">
+							<h2 className="font-semibold text-kumo-default">New Event</h2>
+							<Button variant="ghost" size="sm" shape="square" icon={<XIcon />} onClick={() => setIsNewEventOpen(false)} aria-label="Close" />
 						</div>
-						<div>
-							<label className="block text-sm font-medium text-kumo-default mb-1">Description</label>
-							<textarea 
-								className="w-full rounded-md border border-kumo-line bg-kumo-base px-3 py-2 text-sm text-kumo-default focus:border-kumo-brand focus:outline-none focus:ring-1 focus:ring-kumo-brand resize-none"
-								rows={3}
-								value={newEvent.description}
-								onChange={e => setNewEvent({...newEvent, description: e.target.value})}
-							/>
-						</div>
-						<div className="pt-4 flex justify-end gap-2">
-							<Button type="button" variant="secondary" onClick={() => setIsNewEventOpen(false)}>Cancel</Button>
-							<Button variant="primary" type="submit" disabled={createEventMutation.isPending}>
-								{createEventMutation.isPending ? "Saving..." : "Save"}
-							</Button>
-						</div>
-					</form>
-				</Dialog>
-			</Dialog.Root>
-
-			{/* Edit Event Modal */}
-			<Dialog.Root open={isEditEventOpen} onOpenChange={setIsEditEventOpen}>
-				<Dialog size="base" className="p-0">
-					<div className="p-4 border-b border-kumo-line flex items-center justify-between">
-						<Dialog.Title className="font-semibold text-kumo-default">Edit Event</Dialog.Title>
-						<Button variant="ghost" size="sm" shape="square" icon={<XIcon />} onClick={() => setIsEditEventOpen(false)} aria-label="Close" />
-					</div>
-					{editEvent && (
-						<form onSubmit={handleUpdateEvent} className="p-4 space-y-4">
+						<form onSubmit={handleCreateEvent} className="p-4 space-y-4">
 							<Input 
 								label="Title" 
 								required 
-								value={editEvent.title} 
-								onChange={e => setEditEvent({...editEvent, title: e.target.value})} 
+								value={newEvent.title} 
+								onChange={e => setNewEvent({...newEvent, title: e.target.value})} 
 							/>
-							<div className="grid grid-cols-2 gap-4">
+							<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 								<Input 
 									label="Start" 
 									type="datetime-local" 
 									required 
-									value={editEvent.start_at ? new Date(editEvent.start_at).toISOString().slice(0, 16) : ""} 
-									onChange={e => setEditEvent({...editEvent, start_at: e.target.value})} 
+									value={newEvent.start_at} 
+									onChange={e => setNewEvent({...newEvent, start_at: e.target.value})} 
 								/>
 								<Input 
 									label="End" 
 									type="datetime-local" 
 									required 
-									value={editEvent.end_at ? new Date(editEvent.end_at).toISOString().slice(0, 16) : ""} 
-									onChange={e => setEditEvent({...editEvent, end_at: e.target.value})} 
+									value={newEvent.end_at} 
+									onChange={e => setNewEvent({...newEvent, end_at: e.target.value})} 
 								/>
 							</div>
 							<div>
@@ -565,20 +519,74 @@ export default function CalendarRoute() {
 								<textarea 
 									className="w-full rounded-md border border-kumo-line bg-kumo-base px-3 py-2 text-sm text-kumo-default focus:border-kumo-brand focus:outline-none focus:ring-1 focus:ring-kumo-brand resize-none"
 									rows={3}
-									value={editEvent.description || ""}
-									onChange={e => setEditEvent({...editEvent, description: e.target.value})}
+									value={newEvent.description}
+									onChange={e => setNewEvent({...newEvent, description: e.target.value})}
 								/>
 							</div>
 							<div className="pt-4 flex justify-end gap-2">
-								<Button type="button" variant="secondary" onClick={() => setIsEditEventOpen(false)}>Cancel</Button>
-								<Button variant="primary" type="submit" disabled={updateEventMutation.isPending}>
-									{updateEventMutation.isPending ? "Saving..." : "Save Changes"}
+								<Button type="button" variant="secondary" onClick={() => setIsNewEventOpen(false)}>Cancel</Button>
+								<Button variant="primary" type="submit" disabled={createEventMutation.isPending}>
+									{createEventMutation.isPending ? "Saving..." : "Save"}
 								</Button>
 							</div>
 						</form>
-					)}
-				</Dialog>
-			</Dialog.Root>
+					</div>
+				</div>
+			)}
+
+			{/* Edit Event Modal */}
+			{isEditEventOpen && (
+				<div className="fixed inset-0 z-[100] flex items-center justify-center p-4" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+					<div className="absolute inset-0 bg-black/30 transition-opacity" onClick={() => setIsEditEventOpen(false)} />
+					<div className="relative bg-white rounded-lg shadow-xl w-full max-w-md pointer-events-auto animate-in fade-in zoom-in-95 duration-200">
+						<div className="p-4 border-b border-kumo-line flex items-center justify-between">
+							<h2 className="font-semibold text-kumo-default">Edit Event</h2>
+							<Button variant="ghost" size="sm" shape="square" icon={<XIcon />} onClick={() => setIsEditEventOpen(false)} aria-label="Close" />
+						</div>
+						{editEvent && (
+							<form onSubmit={handleUpdateEvent} className="p-4 space-y-4">
+								<Input 
+									label="Title" 
+									required 
+									value={editEvent.title} 
+									onChange={e => setEditEvent({...editEvent, title: e.target.value})} 
+								/>
+								<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+									<Input 
+										label="Start" 
+										type="datetime-local" 
+										required 
+										value={editEvent.start_at ? new Date(editEvent.start_at).toISOString().slice(0, 16) : ""} 
+										onChange={e => setEditEvent({...editEvent, start_at: e.target.value})} 
+									/>
+									<Input 
+										label="End" 
+										type="datetime-local" 
+										required 
+										value={editEvent.end_at ? new Date(editEvent.end_at).toISOString().slice(0, 16) : ""} 
+										onChange={e => setEditEvent({...editEvent, end_at: e.target.value})} 
+									/>
+								</div>
+								<div>
+									<label className="block text-sm font-medium text-kumo-default mb-1">Description</label>
+									<textarea 
+										className="w-full rounded-md border border-kumo-line bg-kumo-base px-3 py-2 text-sm text-kumo-default focus:border-kumo-brand focus:outline-none focus:ring-1 focus:ring-kumo-brand resize-none"
+										rows={3}
+										value={editEvent.description || ""}
+										onChange={e => setEditEvent({...editEvent, description: e.target.value})}
+									/>
+								</div>
+								<div className="pt-4 flex justify-end gap-2">
+									<Button type="button" variant="secondary" onClick={() => setIsEditEventOpen(false)}>Cancel</Button>
+									<Button variant="primary" type="submit" disabled={updateEventMutation.isPending}>
+										{updateEventMutation.isPending ? "Saving..." : "Save Changes"}
+									</Button>
+								</div>
+							</form>
+						)}
+					</div>
+				</div>
+			)}
 		</>,
 		document.body
 	) : null}
