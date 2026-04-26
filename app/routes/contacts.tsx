@@ -26,14 +26,23 @@ export default function ContactsRoute() {
 	const deleteContactMutation = useDeleteContact();
 
 	const filteredContacts = useMemo(() => {
-		if (!searchQuery.trim()) return contacts;
-		const query = searchQuery.toLowerCase();
-		return contacts.filter(c => 
-			c.name.toLowerCase().includes(query) || 
-			c.email.toLowerCase().includes(query) ||
-			(c.org && c.org.toLowerCase().includes(query))
-		);
-	}, [contacts, searchQuery]);
+		let result = contacts;
+		if (searchQuery.trim()) {
+			const query = searchQuery.toLowerCase();
+			result = contacts.filter(c => 
+				c.name.toLowerCase().includes(query) || 
+				c.email.toLowerCase().includes(query) ||
+				(c.org && c.org.toLowerCase().includes(query))
+			);
+		}
+		
+		// Sort to put mailbox owner at the top
+		return [...result].sort((a, b) => {
+			if (a.email === mailboxId) return -1;
+			if (b.email === mailboxId) return 1;
+			return a.name.localeCompare(b.name);
+		});
+	}, [contacts, searchQuery, mailboxId]);
 
 	// Fetch recent emails for selected contact
 	const { data: recentEmailsData } = useSearchEmails(mailboxId, 
@@ -86,7 +95,7 @@ export default function ContactsRoute() {
 	return (
 		<div className="flex h-full bg-kumo-base overflow-hidden">
 			{/* Left panel: List */}
-			<div className="flex flex-col w-1/3 min-w-[300px] border-r border-kumo-line shrink-0">
+			<div className="flex flex-col w-full md:w-[380px] border-r border-kumo-line shrink-0">
 				<div className="p-4 border-b border-kumo-line flex flex-col gap-3">
 					<div className="flex items-center justify-between">
 						<h1 className="text-lg font-semibold text-kumo-default">Contacts</h1>
