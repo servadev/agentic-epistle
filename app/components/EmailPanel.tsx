@@ -206,15 +206,17 @@ export default function EmailPanel({ emailId }: { emailId: string }) {
 						const isDraft = draftMessageIds.has(msg.id);
 						let suggestedEventsEmailId = msg.id;
 						if (isDraft) {
-							// Find the email this draft is replying to
+							// If it's a draft, the agent creates the event with the thread's primary email ID,
+							// which is often the first received email in the thread, or the explicit in_reply_to.
+							// For robust matching, we just use the original thread email's ID if we can't find in_reply_to.
 							const repliedTo = allMessages.find(m => m.message_id === msg.in_reply_to || m.id === msg.in_reply_to);
 							if (repliedTo) {
 								suggestedEventsEmailId = repliedTo.id;
 							} else {
-								// Fallback: the message before the draft
-								const prevMsg = allMessages[idx - 1];
-								if (prevMsg) {
-									suggestedEventsEmailId = prevMsg.id;
+								// Fallback: Use the very first message in the thread (which is what triggered the agent)
+								const firstMsg = allMessages.find(m => !draftMessageIds.has(m.id));
+								if (firstMsg) {
+									suggestedEventsEmailId = firstMsg.id;
 								}
 							}
 						}
