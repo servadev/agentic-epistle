@@ -10,6 +10,7 @@ import {
 	PaperPlaneTiltIcon,
 	PencilSimpleIcon,
 	TrashIcon,
+	CalendarPlus,
 } from "@phosphor-icons/react";
 import EmailAttachmentList from "~/components/EmailAttachmentList";
 import EmailIframe from "~/components/EmailIframe";
@@ -20,6 +21,8 @@ import {
 	stripHtml,
 } from "~/lib/utils";
 import { useContacts } from "~/queries/contacts";
+import { useSuggestedEvents, useCreateEvent, useDeleteEvent } from "~/queries/calendar";
+import { useKumoToastManager } from "@cloudflare/kumo";
 import type { Email } from "~/types";
 
 interface ThreadMessageProps {
@@ -77,6 +80,46 @@ export default function ThreadMessage({
 	const { data: contactsData } = useContacts(mailboxId);
 	const contacts = contactsData?.contacts || [];
 	
+	const toastManager = useKumoToastManager();
+	const { data: suggestedEvents } = useSuggestedEvents(mailboxId, email.id);
+	const createEvent = useCreateEvent();
+	const deleteEvent = useDeleteEvent();
+
+	const handleAddEvent = (event: any) => {
+		if (!mailboxId) return;
+		createEvent.mutate(
+			{
+				mailboxId,
+				event: {
+					title: event.title,
+					start_at: event.start_at,
+					end_at: event.end_at,
+					description: event.description,
+					location: event.location,
+					all_day: event.all_day,
+				}
+			},
+			{
+				onSuccess: () => {
+					toastManager.add({ title: "Event added to calendar" });
+					deleteEvent.mutate({ mailboxId, id: event.id });
+				},
+				onError: () => {
+					toastManager.add({ title: "Failed to add event", variant: "error" });
+				},
+			},
+		);
+	};
+
+	const handleDismissEvent = (eventId: string) => {
+		if (!mailboxId) return;
+		deleteEvent.mutate({ mailboxId, id: eventId }, {
+			onSuccess: () => {
+				toastManager.add({ title: "Suggestion dismissed" });
+			},
+		});
+	};
+
 	const senderMatch = email.sender.match(/<([^>]+)>/);
 	const rawSenderEmail = senderMatch ? senderMatch[1] : email.sender;
 	const senderContact = contacts.find(c => c.email.toLowerCase() === rawSenderEmail.toLowerCase());
@@ -181,6 +224,44 @@ export default function ThreadMessage({
 						autoSize
 					/>
 				</div>
+
+				{suggestedEvents && suggestedEvents.length > 0 && (
+					<div className="mt-3 md:ml-[42px] px-4 py-3 bg-blue-50/50 border border-blue-100 dark:bg-blue-950/20 dark:border-blue-900/50 rounded-lg flex flex-col gap-3">
+						<div className="text-sm font-medium text-blue-800 dark:text-blue-300 flex items-center gap-2">
+							<CalendarPlus className="h-4 w-4" />
+							Suggested Meetings
+						</div>
+						{suggestedEvents.map((event) => (
+							<div key={event.id} className="bg-white dark:bg-gray-900 border border-blue-200 dark:border-blue-800 rounded-md p-3 shadow-sm flex items-center justify-between gap-4">
+								<div className="min-w-0 flex-1">
+									<div className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">
+										{event.title}
+									</div>
+									<div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+										{new Date(event.start_at).toLocaleString()} - {new Date(event.end_at).toLocaleTimeString()}
+									</div>
+								</div>
+								<div className="flex items-center gap-2 shrink-0">
+									<Button 
+										size="sm" 
+										variant="outline" 
+										className="h-8 text-xs border-blue-200 hover:bg-blue-50 dark:border-blue-800 dark:hover:bg-blue-900/30"
+										onClick={() => handleDismissEvent(event.id)}
+									>
+										Dismiss
+									</Button>
+									<Button 
+										size="sm" 
+										className="h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white"
+										onClick={() => handleAddEvent(event)}
+									>
+										Add to Calendar
+									</Button>
+								</div>
+							</div>
+						))}
+					</div>
+				)}
 
 				{isDraft && (onSendDraft || onEditDraft || onDeleteDraft) && (
 					<div className="flex gap-2 mt-3 md:ml-[42px]">

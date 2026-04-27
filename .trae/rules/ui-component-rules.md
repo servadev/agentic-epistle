@@ -1,0 +1,2 @@
+## UI & Components — STRICT RULES
+- **Modals**: All custom modals MUST use a dark full-screen overlay (`bg-black/30`), fixed absolute positioning (`fixed inset-0 z-[100]`), and be wrapped in a React Portal (`createPortal`) attaching to `document.body`. This prevents layout clipping issues. Avoid the default Kumo Dialog light overlays.
