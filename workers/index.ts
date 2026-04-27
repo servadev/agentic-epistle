@@ -85,6 +85,7 @@ app.use("/api/*", cors({
 }));
 app.use("/api/v1/mailboxes/:mailboxId/*", requireMailbox);
 app.use("/api/v1/mailboxes/:mailboxId/calendar/*", requireCalendar);
+app.use("/api/v1/mailboxes/:mailboxId/emails/:emailId/suggested-events", requireCalendar);
 app.use("/api/v1/mailboxes/:mailboxId/contacts/*", requireContacts);
 
 // -- Config ---------------------------------------------------------

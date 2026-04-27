@@ -291,11 +291,19 @@ export default function HomeRoute() {
 	const unreadRecent = recentEmails.filter(e => !e.read);
 	const priorityEmails = (unreadRecent.length > 0 ? unreadRecent : recentEmails).slice(0, 3);
 
-	const todayStart = startOfDay(new Date()).toISOString();
-	const todayEnd = endOfDay(new Date()).toISOString();
-	const { data: todayEvents = [] } = useEvents(defaultAccount?.id, { start: todayStart, end: todayEnd }, { enabled: !!defaultAccount?.id });
+	const [todayStart, setTodayStart] = useState("");
+	const [todayEnd, setTodayEnd] = useState("");
+	const [currentTime, setCurrentTime] = useState(0);
+
+	useEffect(() => {
+		setTodayStart(startOfDay(new Date()).toISOString());
+		setTodayEnd(endOfDay(new Date()).toISOString());
+		setCurrentTime(Date.now());
+	}, []);
+
+	const { data: todayEvents = [] } = useEvents(defaultAccount?.id, { start: todayStart, end: todayEnd }, { enabled: !!defaultAccount?.id && !!todayStart });
 	const sortedTodayEvents = [...todayEvents]
-		.filter((e) => new Date(e.end_at).getTime() > Date.now())
+		.filter((e) => new Date(e.end_at).getTime() > currentTime)
 		.sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime())
 		.slice(0, 3);
 	
