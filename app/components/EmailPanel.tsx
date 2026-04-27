@@ -48,7 +48,7 @@ export default function EmailPanel({ emailId }: { emailId: string }) {
 	const toastManager = useKumoToastManager();
 	const [isSending, setIsSending] = useState(false);
 	const [sourceViewEmail, setSourceViewEmail] = useState<Email | null>(null);
-	const [expandedMessages, setExpandedMessages] = useState<Set<string>>(new Set());
+	const [collapsedMessages, setCollapsedMessages] = useState<Set<string>>(new Set());
 	const [previewImage, setPreviewImage] = useState<{ url: string; filename: string } | null>(null);
 
 	// Modals state
@@ -66,12 +66,13 @@ export default function EmailPanel({ emailId }: { emailId: string }) {
 		return [email, ...threadReplies].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 	}, [email, threadReplies]);
 
-	// Reset expanded state only when the selected email changes, not on every refetch.
-	// Using allMessages as a dependency would reset user expand/collapse state on background refetches.
+	// Reset collapsed state when the selected email changes
 	const currentEmailId = email?.id;
-	useEffect(() => { if (allMessages.length > 1) setExpandedMessages(new Set(allMessages.map(m => m.id))); }, [currentEmailId]); // eslint-disable-line react-hooks/exhaustive-deps
+	useEffect(() => {
+		setCollapsedMessages(new Set());
+	}, [currentEmailId]);
 
-	const toggleExpand = (msgId: string) => { setExpandedMessages((prev) => { const next = new Set(prev); if (next.has(msgId)) next.delete(msgId); else next.add(msgId); return next; }); };
+	const toggleExpand = (msgId: string) => { setCollapsedMessages((prev) => { const next = new Set(prev); if (next.has(msgId)) next.delete(msgId); else next.add(msgId); return next; }); };
 
 	const draftMessageIds = useMemo(() => {
 		const ids = new Set<string>();
@@ -212,7 +213,7 @@ export default function EmailPanel({ emailId }: { emailId: string }) {
 								isLast={idx === allMessages.length - 1}
 								isDraft={isDraft}
 								isSending={isDraft ? isSending : false}
-								isExpanded={expandedMessages.has(msg.id)}
+								isExpanded={!collapsedMessages.has(msg.id)}
 								onToggleExpand={() => toggleExpand(msg.id)}
 								onSendDraft={isDraft ? () => handleSendDraft(msg) : undefined}
 								onEditDraft={isDraft ? () => handleEditDraft(msg) : undefined}
