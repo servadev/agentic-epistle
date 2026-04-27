@@ -4,7 +4,9 @@
 
 import EmailAttachmentList from "~/components/EmailAttachmentList";
 import EmailIframe from "~/components/EmailIframe";
-import { formatDetailDate, rewriteInlineImages } from "~/lib/utils";
+import { Folders } from "shared/folders";
+import {
+	formatDetailDate, rewriteInlineImages } from "~/lib/utils";
 import { useContacts } from "~/queries/contacts";
 import type { Email } from "~/types";
 import { useSuggestedEvents, useCreateEvent, useDeleteEvent } from "~/queries/calendar";
@@ -23,7 +25,8 @@ export default function SingleMessageView({
 	onPreviewImage,
 }: SingleMessageViewProps) {
 	const toastManager = useKumoToastManager();
-	const { data: suggestedEvents } = useSuggestedEvents(mailboxId, email.id);
+	const queryEmailId = email.folder_id === Folders.DRAFT && email.in_reply_to ? email.in_reply_to : email.id;
+	const { data: suggestedEvents } = useSuggestedEvents(mailboxId, queryEmailId);
 	const createEvent = useCreateEvent();
 	const deleteEvent = useDeleteEvent();
 

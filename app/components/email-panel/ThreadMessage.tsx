@@ -81,7 +81,8 @@ export default function ThreadMessage({
 	const contacts = contactsData?.contacts || [];
 	
 	const toastManager = useKumoToastManager();
-	const { data: suggestedEvents } = useSuggestedEvents(mailboxId, email.id);
+	const queryEmailId = isDraft && email.in_reply_to ? email.in_reply_to : email.id;
+	const { data: suggestedEvents } = useSuggestedEvents(mailboxId, queryEmailId);
 	const createEvent = useCreateEvent();
 	const deleteEvent = useDeleteEvent();
 

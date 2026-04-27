@@ -33,6 +33,7 @@ export function useSuggestedEvents(mailboxId: string | undefined, emailId: strin
 			return api.getSuggestedEvents(mailboxId, emailId);
 		},
 		enabled: !!mailboxId && !!emailId,
+		refetchInterval: 2000,
 	});
 }
 
