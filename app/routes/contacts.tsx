@@ -10,6 +10,7 @@ import {
   BuildingsIcon,
   PhoneIcon,
   ArrowLeftIcon,
+  CameraIcon,
 } from "@phosphor-icons/react";
 import {
   useContacts,
@@ -30,6 +31,7 @@ export default function ContactsRoute() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
   // Form state
@@ -311,6 +313,36 @@ export default function ContactsRoute() {
               onSubmit={handleSave}
               className="flex flex-col gap-4 bg-kumo-base p-4 md:p-6 rounded-xl border border-kumo-line shadow-sm"
             >
+              {selectedContact && (
+                <div className="flex justify-center mb-2">
+                  <div
+                    className="relative group cursor-pointer"
+                    onClick={() => setIsAvatarModalOpen(true)}
+                  >
+                    {editForm.avatar_url ? (
+                      <img
+                        src={editForm.avatar_url}
+                        alt="Avatar"
+                        className="w-24 h-24 rounded-2xl object-cover bg-kumo-fill transition-opacity group-hover:opacity-75"
+                      />
+                    ) : (
+                      <div className="w-24 h-24 rounded-2xl bg-slate-200 flex items-center justify-center text-slate-600 shrink-0 text-3xl font-bold shadow-sm transition-opacity group-hover:opacity-75">
+                        {editForm.name
+                          ? editForm.name.charAt(0).toUpperCase()
+                          : editForm.email?.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl bg-black/30">
+                      <CameraIcon
+                        size={32}
+                        weight="fill"
+                        className="text-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input
                   label="Name"
@@ -331,43 +363,6 @@ export default function ContactsRoute() {
                 />
               </div>
 
-              {selectedContact && (
-                <div>
-                  <label className="block text-sm font-medium text-kumo-default mb-1">
-                    Avatar
-                  </label>
-                  <div className="flex items-center gap-4">
-                    {editForm.avatar_url ? (
-                      <img
-                        src={editForm.avatar_url}
-                        alt="Avatar"
-                        className="w-12 h-12 rounded-lg object-cover bg-kumo-fill"
-                      />
-                    ) : (
-                      <div className="w-12 h-12 rounded-lg bg-kumo-tint flex items-center justify-center text-kumo-subtle shrink-0">
-                        <UserCircleIcon size={24} weight="fill" />
-                      </div>
-                    )}
-                    <div>
-                      <input
-                        type="file"
-                        accept="image/jpeg, image/png, image/gif, image/webp"
-                        onChange={handleAvatarUpload}
-                        className="block w-full text-sm text-kumo-subtle
-													file:mr-4 file:py-2 file:px-4
-													file:rounded-md file:border-0
-													file:text-sm file:font-medium
-													file:bg-kumo-tint file:text-kumo-default
-													hover:file:bg-kumo-overlay
-													cursor-pointer"
-                      />
-                      <div className="text-xs text-kumo-subtle mt-1">
-                        Max size: 5MB. JPEG, PNG, GIF, WebP.
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input
                   label="Phone"
@@ -585,6 +580,61 @@ export default function ContactsRoute() {
           </div>
         )}
       </div>
+
+      {/* Avatar Upload Modal */}
+      {isAvatarModalOpen && selectedContact && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-kumo-base rounded-lg shadow-lg w-full max-w-sm overflow-hidden flex flex-col p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-kumo-default">
+                Update Avatar
+              </h2>
+              <Button
+                variant="ghost"
+                icon={<XIcon />}
+                onClick={() => setIsAvatarModalOpen(false)}
+              />
+            </div>
+
+            <div className="flex flex-col items-center gap-4 mb-6">
+              {editForm.avatar_url ? (
+                <img
+                  src={editForm.avatar_url}
+                  alt="Avatar Preview"
+                  className="w-32 h-32 rounded-2xl object-cover bg-kumo-fill"
+                />
+              ) : (
+                <div className="w-32 h-32 rounded-2xl bg-slate-200 flex items-center justify-center text-slate-600 text-4xl font-bold shadow-sm">
+                  {editForm.name
+                    ? editForm.name.charAt(0).toUpperCase()
+                    : editForm.email?.charAt(0).toUpperCase()}
+                </div>
+              )}
+
+              <div className="w-full">
+                <input
+                  type="file"
+                  accept="image/jpeg, image/png, image/gif, image/webp"
+                  onChange={async (e) => {
+                    await handleAvatarUpload(e);
+                    setIsAvatarModalOpen(false);
+                  }}
+                  className="block w-full text-sm text-kumo-subtle
+                    file:mr-4 file:py-2 file:px-4
+                    file:rounded-md file:border-0
+                    file:text-sm file:font-medium
+                    file:bg-kumo-tint file:text-kumo-default
+                    hover:file:bg-kumo-overlay
+                    cursor-pointer"
+                />
+                <div className="text-xs text-kumo-subtle mt-2 text-center">
+                  Max size: 5MB. JPEG, PNG, GIF, WebP.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       {isDeleteConfirmOpen && selectedContact && (

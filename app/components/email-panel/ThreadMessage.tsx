@@ -19,6 +19,7 @@ import {
 	rewriteInlineImages,
 	stripHtml,
 } from "~/lib/utils";
+import { useContacts } from "~/queries/contacts";
 import type { Email } from "~/types";
 
 interface ThreadMessageProps {
@@ -37,10 +38,15 @@ interface ThreadMessageProps {
 	onPreviewImage?: (url: string, filename: string) => void;
 }
 
-function Avatar({ isDraft, isSelf, sender }: { isDraft?: boolean; isSelf: boolean; sender: string }) {
+function Avatar({ isDraft, isSelf, sender, avatarUrl }: { isDraft?: boolean; isSelf: boolean; sender: string; avatarUrl?: string }) {
+	if (avatarUrl) {
+		return (
+			<img src={avatarUrl} alt="" className="flex h-8 w-8 shrink-0 rounded-lg object-cover bg-slate-100 shadow-sm" />
+		);
+	}
 	return (
 		<div
-			className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+			className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold shadow-sm ${
 				isDraft
 					? "bg-slate-100 text-slate-500"
 					: isSelf
@@ -68,6 +74,14 @@ export default function ThreadMessage({
 	onViewSource,
 	onPreviewImage,
 }: ThreadMessageProps) {
+	const { data: contactsData } = useContacts(mailboxId);
+	const contacts = contactsData?.contacts || [];
+	
+	const senderMatch = email.sender.match(/<([^>]+)>/);
+	const rawSenderEmail = senderMatch ? senderMatch[1] : email.sender;
+	const senderContact = contacts.find(c => c.email.toLowerCase() === rawSenderEmail.toLowerCase());
+	const avatarUrl = senderContact?.avatar_url;
+
 	const isSelf = email.sender === mailboxEmail;
 	const containerClassName = `${!isLast ? "border-b border-slate-200" : ""} ${isDraft ? "border-l-2 border-l-amber-500 bg-amber-50/50" : ""}`;
 	const senderLabel = isDraft ? "Draft reply" : isSelf ? "You" : email.sender;
@@ -80,7 +94,7 @@ export default function ThreadMessage({
 					onClick={onToggleExpand}
 					className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 rounded-lg text-left"
 				>
-					<Avatar isDraft={isDraft} isSelf={isSelf} sender={email.sender} />
+					<Avatar isDraft={isDraft} isSelf={isSelf} sender={email.sender} avatarUrl={avatarUrl} />
 					<div className="flex-1 min-w-0">
 						<div className="flex items-center justify-between">
 							<span className="text-sm font-medium text-slate-900 truncate">
@@ -111,8 +125,8 @@ export default function ThreadMessage({
 							className="shrink-0"
 							aria-label="Collapse message"
 						>
-							<div className="cursor-pointer hover:ring-2 hover:ring-indigo-600/30 transition-shadow rounded-full">
-								<Avatar isDraft={isDraft} isSelf={isSelf} sender={email.sender} />
+							<div className="cursor-pointer hover:ring-2 hover:ring-indigo-600/30 transition-shadow rounded-lg">
+								<Avatar isDraft={isDraft} isSelf={isSelf} sender={email.sender} avatarUrl={avatarUrl} />
 							</div>
 						</button>
 						<div className="min-w-0">

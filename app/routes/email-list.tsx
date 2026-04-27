@@ -299,6 +299,24 @@ export default function EmailListRoute() {
 		}
 	};
 
+	const getParticipantAvatar = (email: Email): string | undefined => {
+		if (email.participants) {
+			const firstParticipant = email.participants.split(",")[0].trim();
+			const emailMatch = firstParticipant.match(/<([^>]+)>/);
+			const rawEmail = emailMatch ? emailMatch[1] : firstParticipant;
+			
+			const contact = contacts.find(c => c.email.toLowerCase() === rawEmail.toLowerCase());
+			if (contact?.avatar_url) return contact.avatar_url;
+		}
+		
+		const senderMatch = email.sender.match(/<([^>]+)>/);
+		const rawSenderEmail = senderMatch ? senderMatch[1] : email.sender;
+		const senderContact = contacts.find(c => c.email.toLowerCase() === rawSenderEmail.toLowerCase());
+		if (senderContact?.avatar_url) return senderContact.avatar_url;
+
+		return undefined;
+	};
+
 	const formatParticipants = (email: Email): string => {
 		if (email.participants) {
 			const names = email.participants
@@ -410,9 +428,17 @@ export default function EmailListRoute() {
 
 												{/* Avatar */}
 												<div className="pt-0.5 shrink-0 pl-1">
-													<div className="h-10 w-10 rounded-lg bg-slate-200 text-slate-600 flex items-center justify-center text-lg font-bold shadow-sm">
-														{formatParticipants(email).charAt(0).toUpperCase()}
-													</div>
+													{getParticipantAvatar(email) ? (
+														<img
+															src={getParticipantAvatar(email)}
+															alt=""
+															className="h-10 w-10 rounded-lg object-cover bg-slate-200 shadow-sm"
+														/>
+													) : (
+														<div className="h-10 w-10 rounded-lg bg-slate-200 text-slate-600 flex items-center justify-center text-lg font-bold shadow-sm">
+															{formatParticipants(email).charAt(0).toUpperCase()}
+														</div>
+													)}
 												</div>
 
 												{/* Content */}

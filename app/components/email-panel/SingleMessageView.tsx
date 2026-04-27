@@ -5,6 +5,7 @@
 import EmailAttachmentList from "~/components/EmailAttachmentList";
 import EmailIframe from "~/components/EmailIframe";
 import { formatDetailDate, rewriteInlineImages } from "~/lib/utils";
+import { useContacts } from "~/queries/contacts";
 import type { Email } from "~/types";
 import { useSuggestedEvents, useCreateEvent, useDeleteEvent } from "~/queries/calendar";
 import { CalendarPlus, CalendarX } from "@phosphor-icons/react";
@@ -25,6 +26,13 @@ export default function SingleMessageView({
 	const { data: suggestedEvents } = useSuggestedEvents(mailboxId, email.id);
 	const createEvent = useCreateEvent();
 	const deleteEvent = useDeleteEvent();
+
+	const { data: contactsData } = useContacts(mailboxId);
+	const contacts = contactsData?.contacts || [];
+	const senderMatch = email.sender.match(/<([^>]+)>/);
+	const rawSenderEmail = senderMatch ? senderMatch[1] : email.sender;
+	const senderContact = contacts.find(c => c.email.toLowerCase() === rawSenderEmail.toLowerCase());
+	const avatarUrl = senderContact?.avatar_url;
 
 	const handleAddEvent = (event: any) => {
 		if (!mailboxId) return;
@@ -69,9 +77,17 @@ export default function SingleMessageView({
 			<div className="px-4 py-4 border-b border-kumo-line md:px-6">
 				<div className="flex items-center justify-between gap-3">
 					<div className="flex items-center gap-2.5 min-w-0">
-						<div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-kumo-fill text-xs font-bold text-kumo-default">
-							{email.sender.charAt(0).toUpperCase()}
-						</div>
+						{avatarUrl ? (
+							<img
+								src={avatarUrl}
+								alt=""
+								className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg object-cover bg-kumo-fill shadow-sm"
+							/>
+						) : (
+							<div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-200 text-slate-600 text-xs font-bold shadow-sm">
+								{email.sender.charAt(0).toUpperCase()}
+							</div>
+						)}
 						<div className="min-w-0">
 							<div className="text-sm font-medium text-kumo-default truncate">
 								{email.sender}

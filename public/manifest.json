@@ -1,7 +1,10 @@
 {
+  "id": "/",
   "name": "Epistle",
   "short_name": "Epistle",
+  "description": "Epistle Agentic Email",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#f8fafc",
