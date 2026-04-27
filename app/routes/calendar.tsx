@@ -17,6 +17,8 @@ import {
   ClockIcon,
   DotsThreeIcon,
   UserCircleIcon,
+  PencilSimpleIcon,
+  TrashIcon,
 } from "@phosphor-icons/react";
 import { ContactSelector } from "~/components/ContactSelector";
 import type { CalendarEvent, Contact } from "~/types";
@@ -397,7 +399,7 @@ export default function CalendarRoute() {
                     <div
                       key={event.id}
                       onClick={() => setSelectedEvent(event)}
-                      className={`p-3 rounded-lg border border-kumo-line bg-kumo-base hover:bg-kumo-tint cursor-pointer transition-colors ${isPassed ? "opacity-50 grayscale" : ""}`}
+                      className={`group relative p-3 rounded-lg border border-kumo-line bg-kumo-base hover:bg-kumo-tint cursor-pointer transition-colors ${isPassed ? "opacity-50 grayscale" : ""}`}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="text-sm font-semibold text-kumo-default truncate pt-1 flex items-center gap-2">
@@ -406,20 +408,59 @@ export default function CalendarRoute() {
                           />
                           {event.title}
                         </div>
-                        <EventMenu
-                          onEdit={() => {
+                      </div>
+                      
+                      <div className="hidden group-hover:flex group-focus-within:flex items-center shrink-0 absolute top-2 right-2 bg-white/90 backdrop-blur rounded-md shadow-sm border border-slate-200 z-10">
+                        <button
+                          type="button"
+                          tabIndex={0}
+                          className="p-1.5 text-slate-400 hover:text-slate-900 focus:text-slate-900 transition-colors border-r border-slate-200"
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setEditEvent({
                               ...event,
                               contacts: event.contacts || [],
                             });
                             setIsEditEventOpen(true);
                           }}
-                          onDelete={() => {
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setEditEvent({
+                                ...event,
+                                contacts: event.contacts || [],
+                              });
+                              setIsEditEventOpen(true);
+                            }
+                          }}
+                          aria-label="Edit event"
+                        >
+                          <PencilSimpleIcon size={16} />
+                        </button>
+                        <button
+                          type="button"
+                          tabIndex={0}
+                          className="p-1.5 text-slate-400 hover:text-red-600 focus:text-red-600 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setEventToDelete(event);
                             setIsDeleteConfirmOpen(true);
                           }}
-                        />
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setEventToDelete(event);
+                              setIsDeleteConfirmOpen(true);
+                            }
+                          }}
+                          aria-label="Delete event"
+                        >
+                          <TrashIcon size={16} />
+                        </button>
                       </div>
+
                       <div className="text-xs text-kumo-subtle mt-0.5 flex items-center gap-1.5">
                         <ClockIcon size={14} />
                         <span>
@@ -445,41 +486,37 @@ export default function CalendarRoute() {
                         </span>
                       </div>
                       {event.contacts && event.contacts.length > 0 && (
-                        <div className="mt-3 flex flex-wrap gap-1.5">
+                        <div className="mt-3 flex items-center pl-2">
                           {event.contacts
                             .slice(0, 3)
-                            .map((contactId: string) => {
+                            .map((contactId: string, idx: number) => {
                               const contact = contactsMap.get(contactId);
                               if (!contact) return null;
                               return (
                                 <div
                                   key={contact.id}
-                                  className="flex items-center gap-1 bg-kumo-tint rounded py-0.5 pl-0.5 pr-2 border border-kumo-line"
+                                  className="relative -ml-2 rounded-md ring-2 ring-kumo-base"
+                                  title={contact.name || contact.email}
                                 >
                                   {contact.avatar_url ? (
                                     <img
                                       src={contact.avatar_url}
                                       alt=""
-                                      className="w-4 h-4 rounded-sm object-cover shrink-0"
+                                      className="w-6 h-6 rounded-md object-cover bg-kumo-fill"
                                     />
                                   ) : (
-                                    <div className="w-4 h-4 rounded-sm bg-slate-200 flex items-center justify-center text-slate-600 shrink-0 text-[8px] font-bold">
+                                    <div className="w-6 h-6 rounded-md bg-slate-200 flex items-center justify-center text-slate-600 text-[10px] font-bold">
                                       {contact.name
                                         ? contact.name.charAt(0).toUpperCase()
                                         : contact.email.charAt(0).toUpperCase()}
                                     </div>
                                   )}
-                                  <span className="text-[10px] font-medium text-kumo-strong truncate max-w-[100px]">
-                                    {contact.name}
-                                  </span>
                                 </div>
                               );
                             })}
                           {event.contacts.length > 3 && (
-                            <div className="flex items-center justify-center bg-kumo-tint rounded-full px-2 py-0.5 border border-kumo-line">
-                              <span className="text-[10px] font-medium text-kumo-strong">
-                                +{event.contacts.length - 3}
-                              </span>
+                            <div className="relative -ml-2 w-6 h-6 rounded-md bg-slate-100 flex items-center justify-center text-slate-600 text-[10px] font-bold ring-2 ring-kumo-base">
+                              +{event.contacts.length - 3}
                             </div>
                           )}
                         </div>

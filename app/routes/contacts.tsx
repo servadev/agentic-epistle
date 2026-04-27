@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useParams, Link } from "react-router";
 import { Button, Input, useKumoToastManager } from "@cloudflare/kumo";
 import {
@@ -11,6 +11,8 @@ import {
   PhoneIcon,
   ArrowLeftIcon,
   CameraIcon,
+  DotsThreeIcon,
+  PencilSimpleIcon,
 } from "@phosphor-icons/react";
 import {
   useContacts,
@@ -20,6 +22,68 @@ import {
 } from "~/queries/contacts";
 import { useSearchEmails } from "~/queries/search";
 import type { Contact } from "~/types";
+
+function ContactMenu({
+  onEdit,
+  onDelete,
+}: {
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative" onClick={(e) => e.stopPropagation()}>
+      <Button
+        variant="ghost"
+        shape="square"
+        icon={<DotsThreeIcon size={20} />}
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((o) => !o);
+        }}
+        aria-label="Contact options"
+      />
+      {open && (
+        <div className="absolute top-full right-0 z-50 mt-1 w-32 rounded-lg border border-kumo-line bg-white shadow-lg py-1">
+          <button
+            type="button"
+            className="w-full text-left px-3 py-1.5 text-sm text-slate-900 hover:bg-slate-50 transition-colors"
+            onClick={(e) => {
+              e.stopPropagation();
+              setOpen(false);
+              onEdit();
+            }}
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            className="w-full text-left px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+            onClick={(e) => {
+              e.stopPropagation();
+              setOpen(false);
+              onDelete();
+            }}
+          >
+            Delete
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function ContactsRoute() {
   const { mailboxId } = useParams<{ mailboxId: string }>();
@@ -248,7 +312,7 @@ export default function ContactsRoute() {
                 <button
                   key={contact.id}
                   type="button"
-                  className={`w-full text-left p-3 hover:bg-kumo-tint transition-colors flex items-center gap-3 ${selectedContact?.id === contact.id ? "bg-kumo-tint" : ""}`}
+                  className={`group relative w-full text-left p-3 hover:bg-kumo-tint transition-colors flex items-center gap-3 ${selectedContact?.id === contact.id ? "bg-kumo-tint" : ""}`}
                   onClick={() => {
                     setSelectedContact(contact);
                     setIsEditOpen(false);
@@ -283,6 +347,65 @@ export default function ContactsRoute() {
                     <div className="text-xs text-kumo-subtle truncate">
                       {contact.email}
                     </div>
+                  </div>
+                  
+                  <div className="hidden group-hover:flex group-focus-within:flex items-center shrink-0 absolute top-1/2 -translate-y-1/2 right-4 bg-white/90 backdrop-blur rounded-md shadow-sm border border-slate-200 z-10">
+                    <button
+                      type="button"
+                      tabIndex={0}
+                      className="p-1.5 text-slate-400 hover:text-slate-900 focus:text-slate-900 transition-colors border-r border-slate-200"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedContact(contact);
+                        setEditForm({
+                          name: contact.name,
+                          email: contact.email,
+                          phone: contact.phone,
+                          org: contact.org,
+                          notes: contact.notes,
+                        });
+                        setIsEditOpen(true);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setSelectedContact(contact);
+                          setEditForm({
+                            name: contact.name,
+                            email: contact.email,
+                            phone: contact.phone,
+                            org: contact.org,
+                            notes: contact.notes,
+                          });
+                          setIsEditOpen(true);
+                        }
+                      }}
+                      aria-label="Edit contact"
+                    >
+                      <PencilSimpleIcon size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      tabIndex={0}
+                      className="p-1.5 text-slate-400 hover:text-red-600 focus:text-red-600 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedContact(contact);
+                        setIsDeleteConfirmOpen(true);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setSelectedContact(contact);
+                          setIsDeleteConfirmOpen(true);
+                        }
+                      }}
+                      aria-label="Delete contact"
+                    >
+                      <TrashIcon size={16} />
+                    </button>
                   </div>
                 </button>
               ))}
@@ -452,9 +575,8 @@ export default function ContactsRoute() {
                 </div>
               </div>
               <div className="flex items-center gap-2 self-end md:self-auto">
-                <Button
-                  variant="secondary"
-                  onClick={() => {
+                <ContactMenu
+                  onEdit={() => {
                     setEditForm({
                       name: selectedContact.name,
                       email: selectedContact.email,
@@ -464,17 +586,8 @@ export default function ContactsRoute() {
                     });
                     setIsEditOpen(true);
                   }}
-                >
-                  Edit
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                  icon={<TrashIcon />}
-                  onClick={() => setIsDeleteConfirmOpen(true)}
-                >
-                  Delete
-                </Button>
+                  onDelete={() => setIsDeleteConfirmOpen(true)}
+                />
               </div>
             </div>
 

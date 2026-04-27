@@ -382,6 +382,41 @@ function createEmailTools(env: Env, mailboxId: string) {
 	};
 }
 
+const MEETING_PATTERNS = [
+	// Existing: explicit meeting/scheduling words
+	/\b(invite|meeting|walk[\s-]?through|catch[\s-]?up|coffee|call|appointment|schedule|available)\b/i,
+
+	// Times: 2pm, 2:30pm, 2-3pm, noon, midday, from 10 to 11
+	/\b(\d{1,2}(:\d{2})?\s*(?:am|pm)|noon|midday|\d{1,2}\s*[-–]\s*\d{1,2}\s*(?:am|pm)?)\b/i,
+
+	// Timezones: AEST, AEDT, UTC, EST, PST etc
+	/\b(AEST|AEDT|ACST|UTC|GMT|EST|PST|CST|MST)\b/,
+
+	// Relative dates: next week, this Friday, end of month, in two weeks
+	/\b(next\s+\w+|this\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday|week|month)|end\s+of\s+(week|month)|in\s+(a\s+few|two|three|a\s+couple\s+of)\s+\w+|tomorrow|today)\b/i,
+
+	// Absolute dates: Mon 5th, 12 March, April 3
+	/\b(\d{1,2}(?:st|nd|rd|th)?\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*\s+\d{1,2})\b/i,
+
+	// Day names standalone
+	/\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i,
+
+	// Event type nouns
+	/\b(webinar|conference|workshop|training|interview|standup|stand-up|sync|demo|presentation|onboarding|briefing|debrief|check[\s-]?in|review|session)\b/i,
+
+	// Scheduling action phrases
+	/\b(let'?s\s+book|block\s+out|set\s+aside|pencil\s+in|lock\s+in|confirm\s+your\s+attendance|save\s+the\s+date|put\s+it\s+in\s+your\s+calendar)\b/i,
+
+	// Platform/invite language
+	/\b(calendar\s+invite|added\s+to\s+your\s+calendar|RSVP|please\s+join|zoom\s+link|teams\s+meeting|google\s+meet|webex|meet\.google|zoom\.us)\b/i,
+
+	// Recurring
+	/\b(every\s+(monday|tuesday|wednesday|thursday|friday|week|fortnight)|weekly|fortnightly|bi[\s-]?weekly|recurring)\b/i,
+
+	// Duration hints
+	/\b(\d+[\s-]?(minute|min|hour|hr)s?\s*(meeting|session|call|sync)?|half[\s-]?day|full[\s-]?day)\b/i,
+];
+
 // Use `any` for the Env generic to avoid type conflicts between the custom
 // SEND_EMAIL binding shape and the AIChatAgent constraint.  The actual env
 // is fully typed inside the tools via the closure.
@@ -558,8 +593,9 @@ This is the first message in the thread (no prior conversation).`;
 Based on the email content and thread context above:
 1. Draft a reply using draft_reply. If you need more context, use get_thread with thread ID "${emailData.threadId}".`;
 
-		const containsMeetingKeywords = /invite|meeting|\b\d{1,2}:\d{2}\b|\b(?:mon|tues|wednes|thurs|fri|satur|sun)day\b|\btomorrow\b|\btoday\b/i.test(emailData.subject) || 
-			/invite|meeting|\b\d{1,2}:\d{2}\b|\b(?:mon|tues|wednes|thurs|fri|satur|sun)day\b|\btomorrow\b|\btoday\b/i.test(emailBody);
+		const containsMeetingKeywords = MEETING_PATTERNS.some(pattern =>
+			pattern.test(emailData.subject) || pattern.test(emailBody)
+		);
 
 		if (containsMeetingKeywords) {
 			autoPrompt += `
