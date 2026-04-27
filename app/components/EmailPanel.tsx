@@ -50,6 +50,10 @@ export default function EmailPanel({ emailId }: { emailId: string }) {
 	const [sourceViewEmail, setSourceViewEmail] = useState<Email | null>(null);
 	const [expandedMessages, setExpandedMessages] = useState<Set<string>>(new Set());
 	const [previewImage, setPreviewImage] = useState<{ url: string; filename: string } | null>(null);
+
+	// Modals state
+	const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+
 	const isDraftFolder = folder === Folders.DRAFT;
 
 	const threadReplies = useMemo(() => {
@@ -90,15 +94,19 @@ export default function EmailPanel({ emailId }: { emailId: string }) {
 	const toggleStar = () => { if (mailboxId) updateEmail.mutate({ mailboxId, id: email.id, data: { starred: !email.starred } }); };
 	const handleMove = (folderId: string) => { if (mailboxId) { moveEmailMut.mutate({ mailboxId, id: email.id, folderId }); closePanel(); } };
 	const handleDelete = () => {
-		if (mailboxId) {
+		setIsDeleteConfirmOpen(true);
+	};
+
+	const executeDelete = () => {
+		if (mailboxId && email) {
 			if (folder === Folders.TRASH) {
-				if (!window.confirm("Are you sure you want to permanently delete this email?")) return;
 				deleteEmailMut.mutate({ mailboxId, id: email.id });
 			} else {
 				moveEmailMut.mutate({ mailboxId, id: email.id, folderId: Folders.TRASH });
 			}
 			closePanel();
 		}
+		setIsDeleteConfirmOpen(false);
 	};
 
 	const handleEditDraft = (draftMsg?: Email) => {
@@ -232,7 +240,13 @@ export default function EmailPanel({ emailId }: { emailId: string }) {
 				previewImage={previewImage}
 				onCloseSource={() => setSourceViewEmail(null)}
 				onClosePreview={() => setPreviewImage(null)}
+				isDeleteConfirmOpen={isDeleteConfirmOpen}
+				onCloseDeleteConfirm={() => setIsDeleteConfirmOpen(false)}
+				onConfirmDelete={executeDelete}
+				isDeleting={deleteEmailMut.isPending || moveEmailMut.isPending}
+				isTrashFolder={folder === Folders.TRASH}
 			/>
 		</div>
 	);
 }
+

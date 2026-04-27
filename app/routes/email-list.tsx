@@ -2,11 +2,13 @@
 // Licensed under the Apache 2.0 license found in the LICENSE file or at:
 //     https://opensource.org/licenses/Apache-2.0
 
-import { Button, Pagination, Tooltip } from "@cloudflare/kumo";
+import { Button, Pagination, Tooltip, Dialog } from "@cloudflare/kumo";
 import {
 	ArchiveIcon,
 	ArrowBendUpLeftIcon,
+	ArrowUUpLeftIcon,
 	ArrowsClockwiseIcon,
+	DotsThreeIcon,
 	EnvelopeOpenIcon,
 	EnvelopeSimpleIcon,
 	FileIcon,
@@ -165,6 +167,103 @@ function getGroupHeader(dateStr: string): string {
 	return date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 }
 
+function MobileEmailMenu({
+	email,
+	folder,
+	mailboxId,
+	onTag,
+	onToggleRead,
+	onMoveToInbox,
+	onDelete,
+}: {
+	email: Email;
+	folder: string | undefined;
+	mailboxId: string | undefined;
+	onTag: () => void;
+	onToggleRead: () => void;
+	onMoveToInbox: () => void;
+	onDelete: (e: React.MouseEvent) => void;
+}) {
+	const [open, setOpen] = useState(false);
+	const ref = useRef<HTMLDivElement>(null);
+
+	useEffect(() => {
+		if (!open) return;
+		const handler = (e: MouseEvent) => {
+			if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+		};
+		document.addEventListener("mousedown", handler);
+		return () => document.removeEventListener("mousedown", handler);
+	}, [open]);
+
+	return (
+		<div ref={ref} className="absolute top-3 right-4 md:hidden" onClick={(e) => e.stopPropagation()}>
+			<Button
+				variant="ghost"
+				shape="square"
+				size="sm"
+				icon={<DotsThreeIcon size={16} />}
+				onClick={(e) => {
+					e.stopPropagation();
+					setOpen((o) => !o);
+				}}
+				aria-label="More actions"
+			/>
+			{open && (
+				<div className="absolute top-full right-0 z-50 mt-1 min-w-[160px] rounded-lg border border-slate-200 bg-white shadow-lg py-1">
+					<button
+						type="button"
+						className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-900 hover:bg-slate-50 transition-colors"
+						onClick={(e) => {
+							e.stopPropagation();
+							setOpen(false);
+							onTag();
+						}}
+					>
+						<TagIcon size={16} /> Tag
+					</button>
+					<button
+						type="button"
+						className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-900 hover:bg-slate-50 transition-colors"
+						onClick={(e) => {
+							e.stopPropagation();
+							setOpen(false);
+							onToggleRead();
+						}}
+					>
+						{email.read ? <EnvelopeSimpleIcon size={16} /> : <EnvelopeOpenIcon size={16} />}
+						{email.read ? "Mark unread" : "Mark read"}
+					</button>
+					{folder === Folders.TRASH && (
+						<button
+							type="button"
+							className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-900 hover:bg-slate-50 transition-colors"
+							onClick={(e) => {
+								e.stopPropagation();
+								setOpen(false);
+								onMoveToInbox();
+							}}
+						>
+							<ArrowUUpLeftIcon size={16} /> Move to inbox
+						</button>
+					)}
+					<button
+						type="button"
+						className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+						onClick={(e) => {
+							e.stopPropagation();
+							setOpen(false);
+							onDelete(e as unknown as React.MouseEvent);
+						}}
+					>
+						<TrashIcon size={16} /> {folder === Folders.TRASH ? "Delete permanently" : "Move to trash"}
+					</button>
+				</div>
+			)}
+		</div>
+	);
+}
+
 export default function EmailListRoute() {
 	const { mailboxId, folder } = useParams<{
 		mailboxId: string;
@@ -180,6 +279,11 @@ export default function EmailListRoute() {
 	} = useUIStore();
 	const [page, setPage] = useState(1);
 	const [tagModalEmail, setTagModalEmail] = useState<Email | null>(null);
+
+	// Modals state
+	const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+	const [emailToDelete, setEmailToDelete] = useState<string | null>(null);
+	const [isEmptyTrashConfirmOpen, setIsEmptyTrashConfirmOpen] = useState(false);
 
 	const queryClient = useQueryClient();
 	const updateEmail = useUpdateEmail();
@@ -259,25 +363,33 @@ export default function EmailListRoute() {
 	const handleDelete = (e: React.MouseEvent, emailId: string) => {
 		e.preventDefault();
 		e.stopPropagation();
-		if (mailboxId) {
+		setEmailToDelete(emailId);
+		setIsDeleteConfirmOpen(true);
+	};
+
+	const executeDelete = () => {
+		if (mailboxId && emailToDelete) {
 			if (folder === Folders.TRASH) {
-				const confirmed = window.confirm("Are you sure you want to permanently delete this email?");
-				if (!confirmed) return;
-				deleteEmail.mutate({ mailboxId, id: emailId });
+				deleteEmail.mutate({ mailboxId, id: emailToDelete });
 			} else {
-				moveEmail.mutate({ mailboxId, id: emailId, folderId: Folders.TRASH });
+				moveEmail.mutate({ mailboxId, id: emailToDelete, folderId: Folders.TRASH });
 			}
-			if (selectedEmailId === emailId) closePanel();
+			if (selectedEmailId === emailToDelete) closePanel();
 		}
+		setIsDeleteConfirmOpen(false);
+		setEmailToDelete(null);
 	};
 
 	const handleEmptyTrash = () => {
+		setIsEmptyTrashConfirmOpen(true);
+	};
+
+	const executeEmptyTrash = () => {
 		if (mailboxId) {
-			const confirmed = window.confirm("Are you sure you want to permanently delete all emails in the Trash folder?");
-			if (!confirmed) return;
 			emptyTrash.mutate(mailboxId);
 			closePanel();
 		}
+		setIsEmptyTrashConfirmOpen(false);
 	};
 
 	const handleRefresh = () => {
@@ -538,7 +650,7 @@ export default function EmailListRoute() {
 												</div>
 
 												{/* Hover actions */}
-												<div className="hidden group-hover:flex items-center shrink-0 absolute top-3 right-4 bg-white/90 backdrop-blur rounded-md shadow-sm border border-slate-200">
+												<div className="hidden md:group-hover:flex items-center shrink-0 absolute top-3 right-4 bg-white/90 backdrop-blur rounded-md shadow-sm border border-slate-200">
 													<Tooltip content="Tag" asChild>
 														<Button
 															variant="ghost"
@@ -570,17 +682,51 @@ export default function EmailListRoute() {
 															aria-label={email.read ? "Mark unread" : "Mark read"}
 														/>
 													</Tooltip>
-													<Tooltip content="Delete" asChild>
+													{folder === Folders.TRASH && (
+														<Tooltip content="Move to inbox" asChild>
+															<Button
+																variant="ghost"
+																shape="square"
+																size="sm"
+																icon={<ArrowUUpLeftIcon size={14} />}
+																onClick={(e) => {
+																	e.stopPropagation();
+																	if (mailboxId) moveEmail.mutate({ mailboxId, id: email.id, folderId: Folders.INBOX });
+																}}
+																aria-label="Move to inbox"
+															/>
+														</Tooltip>
+													)}
+													<Tooltip content={folder === Folders.TRASH ? "Delete permanently" : "Move to trash"} asChild>
 														<Button
 															variant="ghost"
 															shape="square"
 															size="sm"
 															icon={<TrashIcon size={14} />}
 															onClick={(e) => handleDelete(e, email.id)}
-															aria-label="Delete"
+															aria-label={folder === Folders.TRASH ? "Delete permanently" : "Move to trash"}
 														/>
 													</Tooltip>
 												</div>
+												{/* Mobile 3-dot menu */}
+												<MobileEmailMenu
+													email={email}
+													folder={folder}
+													mailboxId={mailboxId}
+													onTag={() => setTagModalEmail(email)}
+													onToggleRead={() => {
+														if (mailboxId)
+															updateEmail.mutate({
+																mailboxId,
+																id: email.id,
+																data: { read: !email.read },
+															});
+													}}
+													onMoveToInbox={() => {
+														if (mailboxId) moveEmail.mutate({ mailboxId, id: email.id, folderId: Folders.INBOX });
+													}}
+													onDelete={(e) => handleDelete(e, email.id)}
+												/>
 											</div>
 										);
 									})}
@@ -616,6 +762,72 @@ export default function EmailListRoute() {
 					onClose={() => setTagModalEmail(null)}
 				/>
 			)}
+
+			{/* Delete Email Dialog */}
+			<Dialog.Root
+				open={isDeleteConfirmOpen}
+				onOpenChange={(open) => {
+					setIsDeleteConfirmOpen(open);
+					if (!open) setEmailToDelete(null);
+				}}
+			>
+				<Dialog size="sm" className="p-6">
+					<Dialog.Title className="text-base font-semibold mb-2">
+						{folder === Folders.TRASH ? "Delete Email Permanently" : "Move to Trash"}
+					</Dialog.Title>
+					<Dialog.Description className="text-kumo-subtle text-sm mb-5">
+						{folder === Folders.TRASH
+							? "Are you sure you want to permanently delete this email? This action cannot be undone."
+							: "Are you sure you want to move this email to the trash?"}
+					</Dialog.Description>
+					<div className="flex justify-end gap-2">
+						<Dialog.Close
+							render={(props) => (
+								<Button {...props} variant="secondary" size="sm">
+									Cancel
+								</Button>
+							)}
+						/>
+						<Button
+							variant="destructive"
+							size="sm"
+							loading={deleteEmail.isPending || moveEmail.isPending}
+							onClick={executeDelete}
+						>
+							{folder === Folders.TRASH ? "Delete" : "Move to Trash"}
+						</Button>
+					</div>
+				</Dialog>
+			</Dialog.Root>
+
+			{/* Empty Trash Dialog */}
+			<Dialog.Root open={isEmptyTrashConfirmOpen} onOpenChange={setIsEmptyTrashConfirmOpen}>
+				<Dialog size="sm" className="p-6">
+					<Dialog.Title className="text-base font-semibold mb-2">
+						Empty Trash
+					</Dialog.Title>
+					<Dialog.Description className="text-kumo-subtle text-sm mb-5">
+						Are you sure you want to permanently delete all emails in the Trash folder? This action cannot be undone.
+					</Dialog.Description>
+					<div className="flex justify-end gap-2">
+						<Dialog.Close
+							render={(props) => (
+								<Button {...props} variant="secondary" size="sm">
+									Cancel
+								</Button>
+							)}
+						/>
+						<Button
+							variant="destructive"
+							size="sm"
+							loading={emptyTrash.isPending}
+							onClick={executeEmptyTrash}
+						>
+							Empty Trash
+						</Button>
+					</div>
+				</Dialog>
+			</Dialog.Root>
 		</MailboxSplitView>
 	);
 }

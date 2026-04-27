@@ -70,7 +70,7 @@ export function useEmptyTrash() {
 		mutationFn: (mailboxId: string) => api.emptyTrash(mailboxId),
 		onSuccess: (_data, mailboxId) => {
 			qc.invalidateQueries({ queryKey: queryKeys.folders.list(mailboxId) });
-			qc.invalidateQueries({ queryKey: queryKeys.emails.list(mailboxId) });
+			qc.invalidateQueries({ queryKey: ["emails", mailboxId] });
 		},
 	});
 }

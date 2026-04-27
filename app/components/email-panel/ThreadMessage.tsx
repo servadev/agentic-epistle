@@ -94,7 +94,7 @@ export default function ThreadMessage({
 					onClick={onToggleExpand}
 					className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 rounded-lg text-left"
 				>
-					<Avatar isDraft={isDraft} isSelf={isSelf} sender={email.sender} avatarUrl={avatarUrl} />
+					<Avatar isDraft={isDraft} isSelf={isSelf} sender={email.sender} avatarUrl={avatarUrl || undefined} />
 					<div className="flex-1 min-w-0">
 						<div className="flex items-center justify-between">
 							<span className="text-sm font-medium text-slate-900 truncate">
@@ -126,7 +126,7 @@ export default function ThreadMessage({
 							aria-label="Collapse message"
 						>
 							<div className="cursor-pointer hover:ring-2 hover:ring-indigo-600/30 transition-shadow rounded-lg">
-								<Avatar isDraft={isDraft} isSelf={isSelf} sender={email.sender} avatarUrl={avatarUrl} />
+								<Avatar isDraft={isDraft} isSelf={isSelf} sender={email.sender} avatarUrl={avatarUrl || undefined} />
 							</div>
 						</button>
 						<div className="min-w-0">

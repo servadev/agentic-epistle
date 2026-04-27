@@ -16,6 +16,11 @@ interface EmailPanelDialogsProps {
 	previewImage: PreviewImage | null;
 	onCloseSource: () => void;
 	onClosePreview: () => void;
+	isDeleteConfirmOpen: boolean;
+	onCloseDeleteConfirm: () => void;
+	onConfirmDelete: () => void;
+	isDeleting: boolean;
+	isTrashFolder: boolean;
 }
 
 function getSourceHeaders(msg: Email): { key: string; value: string }[] {
@@ -60,6 +65,11 @@ export default function EmailPanelDialogs({
 	previewImage,
 	onCloseSource,
 	onClosePreview,
+	isDeleteConfirmOpen,
+	onCloseDeleteConfirm,
+	onConfirmDelete,
+	isDeleting,
+	isTrashFolder,
 }: EmailPanelDialogsProps) {
 	const sourceHeaders = sourceViewEmail ? getSourceHeaders(sourceViewEmail) : [];
 
@@ -150,6 +160,41 @@ export default function EmailPanelDialogs({
 								Close
 							</Button>
 						</Dialog.Close>
+					</div>
+				</Dialog>
+			</Dialog.Root>
+
+			<Dialog.Root
+				open={isDeleteConfirmOpen}
+				onOpenChange={(open) => {
+					if (!open) onCloseDeleteConfirm();
+				}}
+			>
+				<Dialog size="sm" className="p-6">
+					<Dialog.Title className="text-base font-semibold mb-2">
+						{isTrashFolder ? "Delete Email Permanently" : "Move to Trash"}
+					</Dialog.Title>
+					<Dialog.Description className="text-kumo-subtle text-sm mb-5">
+						{isTrashFolder
+							? "Are you sure you want to permanently delete this email? This action cannot be undone."
+							: "Are you sure you want to move this email to the trash?"}
+					</Dialog.Description>
+					<div className="flex justify-end gap-2">
+						<Dialog.Close
+							render={(props) => (
+								<Button {...props} variant="secondary" size="sm">
+									Cancel
+								</Button>
+							)}
+						/>
+						<Button
+							variant="destructive"
+							size="sm"
+							loading={isDeleting}
+							onClick={onConfirmDelete}
+						>
+							{isTrashFolder ? "Delete" : "Move to Trash"}
+						</Button>
 					</div>
 				</Dialog>
 			</Dialog.Root>
