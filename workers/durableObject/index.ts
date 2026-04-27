@@ -1010,6 +1010,10 @@ export class CalendarDO extends DurableObject<Env> {
 		return this.db.select().from(schema.events).where(eq(schema.events.source, `suggested:${emailId}`)).all();
 	}
 
+	async getAllEventsDebug(): Promise<EventData[]> {
+		return this.db.select().from(schema.events).all();
+	}
+
 	async getEvent(id: string): Promise<EventData | undefined> {
 		return this.db.select().from(schema.events).where(eq(schema.events.id, id)).get();
 	}
