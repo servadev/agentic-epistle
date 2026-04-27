@@ -322,7 +322,7 @@ app.get("/api/v1/mailboxes/:mailboxId/calendar/debug-all-events", async (c: AppC
 	return c.json(allEvents);
 });
 
-app.get("/api/v1/mailboxes/:mailboxId/emails/:emailId/suggested-events", async (c: AppContext) => {
+app.get("/api/v1/mailboxes/:mailboxId/emails/:emailId/suggested-events", requireCalendar, async (c: AppContext) => {
 	const emailId = c.req.param("emailId")!;
 	const events = await c.var.calendarStub.getSuggestedEvents(emailId);
 	return c.json(events);

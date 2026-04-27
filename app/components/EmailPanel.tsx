@@ -11,6 +11,7 @@ import EmailPanelHeader from "~/components/email-panel/EmailPanelHeader";
 import EmailPanelToolbar from "~/components/email-panel/EmailPanelToolbar";
 import SingleMessageView from "~/components/email-panel/SingleMessageView";
 import ThreadMessage from "~/components/email-panel/ThreadMessage";
+import SuggestedEventThreadItem from "~/components/email-panel/SuggestedEventThreadItem";
 import { splitEmailList, toEmailListValue } from "~/lib/utils";
 import api from "~/services/api";
 import { useDeleteEmail, useEmail, useMoveEmail, useReplyToEmail, useSendEmail, useThreadReplies, useUpdateEmail } from "~/queries/emails";
@@ -79,6 +80,24 @@ export default function EmailPanel({ emailId }: { emailId: string }) {
 		for (const msg of allMessages) { if (msg.folder_id === Folders.DRAFT) ids.add(msg.id); else if (isDraftFolder && msg.id === emailId) ids.add(msg.id); }
 		return ids;
 	}, [allMessages, isDraftFolder, emailId]);
+
+	// Find the ID to query for thread-level suggested events.
+	// This should be the last received message in the thread, as that's what triggers the agent.
+	const threadSuggestedEventsEmailId = useMemo(() => {
+		if (allMessages.length === 0) return email?.id;
+		
+		const ce = currentMailbox?.email;
+		if (!ce) return email?.id;
+
+		const received = allMessages.filter(
+			(m) =>
+				m.folder_id === Folders.INBOX ||
+				(m.recipient.toLowerCase().includes(ce.toLowerCase()) &&
+					m.folder_id !== Folders.DRAFT &&
+					m.folder_id !== Folders.SENT),
+		);
+		return received.length > 0 ? received[received.length - 1].id : email?.id;
+	}, [allMessages, email?.id, currentMailbox?.email]);
 
 	const lastReceivedMessage = useMemo(() => {
 		const ce = currentMailbox?.email;
@@ -202,55 +221,53 @@ export default function EmailPanel({ emailId }: { emailId: string }) {
 
 			<div className="flex-1 overflow-y-auto">
 				{hasThread ? (
-					allMessages.map((msg, idx) => {
-						const isDraft = draftMessageIds.has(msg.id);
-						let suggestedEventsEmailId = msg.id;
-						if (isDraft) {
-							// If it's a draft, the agent creates the event with the thread's primary email ID,
-							// which is often the first received email in the thread, or the explicit in_reply_to.
-							// For robust matching, we just use the original thread email's ID if we can't find in_reply_to.
-							const repliedTo = allMessages.find(m => m.message_id === msg.in_reply_to || m.id === msg.in_reply_to);
-							if (repliedTo) {
-								suggestedEventsEmailId = repliedTo.id;
-							} else {
-								// Fallback: Use the very first message in the thread (which is what triggered the agent)
-								const firstMsg = allMessages.find(m => !draftMessageIds.has(m.id));
-								if (firstMsg) {
-									suggestedEventsEmailId = firstMsg.id;
-								}
-							}
-						}
-
-						return (
-							<ThreadMessage
-								key={msg.id}
-								email={msg}
-								suggestedEventsEmailId={suggestedEventsEmailId}
+					<>
+						{allMessages.map((msg, idx) => {
+							const isDraft = draftMessageIds.has(msg.id);
+							return (
+								<ThreadMessage
+									key={msg.id}
+									email={msg}
+									mailboxId={mailboxId}
+									mailboxEmail={currentMailbox?.email}
+									isLast={idx === allMessages.length - 1}
+									isDraft={isDraft}
+									isSending={isDraft ? isSending : false}
+									isExpanded={!collapsedMessages.has(msg.id)}
+									onToggleExpand={() => toggleExpand(msg.id)}
+									onSendDraft={isDraft ? () => handleSendDraft(msg) : undefined}
+									onEditDraft={isDraft ? () => handleEditDraft(msg) : undefined}
+									onDeleteDraft={isDraft ? () => handleDeleteDraft(msg) : undefined}
+									onViewSource={() => setSourceViewEmail(msg)}
+									onPreviewImage={(url, filename) =>
+										setPreviewImage({ url, filename })
+									}
+								/>
+							);
+						})}
+						{threadSuggestedEventsEmailId && (
+							<SuggestedEventThreadItem
 								mailboxId={mailboxId}
-								mailboxEmail={currentMailbox?.email}
-								isLast={idx === allMessages.length - 1}
-								isDraft={isDraft}
-								isSending={isDraft ? isSending : false}
-								isExpanded={!collapsedMessages.has(msg.id)}
-								onToggleExpand={() => toggleExpand(msg.id)}
-								onSendDraft={isDraft ? () => handleSendDraft(msg) : undefined}
-								onEditDraft={isDraft ? () => handleEditDraft(msg) : undefined}
-								onDeleteDraft={isDraft ? () => handleDeleteDraft(msg) : undefined}
-								onViewSource={() => setSourceViewEmail(msg)}
-								onPreviewImage={(url, filename) =>
-									setPreviewImage({ url, filename })
-								}
+								queryEmailId={threadSuggestedEventsEmailId}
 							/>
-						);
-					})
+						)}
+					</>
 				) : (
-					<SingleMessageView
-						email={email}
-						mailboxId={mailboxId}
-						onPreviewImage={(url, filename) =>
-							setPreviewImage({ url, filename })
-						}
-					/>
+					<>
+						<SingleMessageView
+							email={email}
+							mailboxId={mailboxId}
+							onPreviewImage={(url, filename) =>
+								setPreviewImage({ url, filename })
+							}
+						/>
+						{threadSuggestedEventsEmailId && (
+							<SuggestedEventThreadItem
+								mailboxId={mailboxId}
+								queryEmailId={threadSuggestedEventsEmailId}
+							/>
+						)}
+					</>
 				)}
 			</div>
 

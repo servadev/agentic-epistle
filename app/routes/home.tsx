@@ -17,6 +17,7 @@ import { useQuery } from "@tanstack/react-query";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link as RouterLink, useNavigate } from "react-router";
+
 import api from "~/services/api";
 import { safeGetStorage } from "~/lib/utils";
 import {
@@ -301,6 +302,8 @@ export default function HomeRoute() {
 		setCurrentTime(Date.now());
 	}, []);
 
+	// Fetch today's events for the agenda using our defined boundaries.
+	// Add enabled flag so it only runs once state is populated.
 	const { data: todayEvents = [] } = useEvents(defaultAccount?.id, { start: todayStart, end: todayEnd }, { enabled: !!defaultAccount?.id && !!todayStart });
 	const sortedTodayEvents = [...todayEvents]
 		.filter((e) => new Date(e.end_at).getTime() > currentTime)
