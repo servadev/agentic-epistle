@@ -508,202 +508,208 @@ export default function HomeRoute() {
 			</div>
 
 			{/* Manage Mailboxes Dialog */}
-			<Dialog.Root open={isManageOpen} onOpenChange={setIsManageOpen}>
-				<Dialog size="sm" className="p-6">
-					<Dialog.Title className="text-base font-semibold mb-4">
-						Manage Mailboxes
-					</Dialog.Title>
-					<div className="space-y-4">
-						<div className="flex items-center justify-between">
-							<span className="text-sm text-kumo-subtle">
-								{accounts.length} mailbox{accounts.length !== 1 ? "es" : ""}
-							</span>
-							{!isConfigured && (
-								<Button
-									variant="ghost"
-									size="sm"
-									icon={<PlusIcon size={14} />}
-									onClick={() => {
-										setIsManageOpen(false);
-										setIsCreateOpen(true);
-									}}
-								>
-									New
-								</Button>
-							)}
+			{isManageOpen && (
+				<div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+					<div 
+						className="absolute inset-0 bg-black/30 transition-opacity" 
+						onClick={() => setIsManageOpen(false)} 
+					/>
+					<div className="relative bg-white rounded-lg shadow-xl w-full max-w-sm pointer-events-auto p-6 animate-in fade-in zoom-in-95 duration-200">
+						<div className="text-base font-semibold mb-4 text-kumo-default">
+							Manage Mailboxes
 						</div>
-						<div className="rounded-xl border border-kumo-line bg-kumo-base overflow-hidden max-h-64 overflow-y-auto">
-							{accounts.map((account, idx) => (
-								<RouterLink
-									key={account.id}
-									to={`/mailbox/${account.id}`}
-									className={`group flex items-center gap-4 px-4 py-3 no-underline transition-colors hover:bg-kumo-tint ${
-										idx > 0 ? "border-t border-kumo-line" : ""
-									}`}
-								>
-									<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-kumo-fill text-xs font-bold text-kumo-default">
-										{account.name.charAt(0).toUpperCase()}
-									</div>
-									<div className="min-w-0 flex-1">
-										<div className="text-sm font-medium text-kumo-default truncate">
-											{account.name}
-										</div>
-										<div className="text-xs text-kumo-subtle truncate">
-											{account.email}
-										</div>
-									</div>
-									{!isConfigured && (
-										<Button
-											variant="ghost"
-											size="sm"
-											shape="square"
-											icon={<TrashIcon size={14} />}
-											aria-label={`Delete mailbox ${account.email}`}
-											onClick={(e) => {
-												e.preventDefault();
-												e.stopPropagation();
-												setMailboxToDelete({
-													id: account.id,
-													email: account.email,
-												});
-												setIsDeleteOpen(true);
-											}}
-										/>
-									)}
-								</RouterLink>
-							))}
-						</div>
-					</div>
-					<div className="mt-6 flex justify-end">
-						<Dialog.Close
-							render={(props) => (
-								<Button {...props} variant="secondary" size="sm">
-									Done
-								</Button>
-							)}
-						/>
-					</div>
-				</Dialog>
-			</Dialog.Root>
-
-			{/* Create Dialog */}
-			<Dialog.Root open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-				<Dialog size="sm" className="p-6">
-					<Dialog.Title className="text-base font-semibold mb-5">
-						Create New Mailbox
-					</Dialog.Title>
-					<form onSubmit={handleCreate} className="space-y-4">
-						{createError && (
-							<Text variant="error" size="sm">
-								{createError}
-							</Text>
-						)}
-						<div>
-							<span className="text-sm font-medium text-kumo-default mb-1.5 block">
-								Email Address
-							</span>
-							<div className="flex items-center gap-2">
-								<div className="flex-1">
-									<Input
-										aria-label="Address prefix"
-										placeholder="info"
+						<div className="space-y-4">
+							<div className="flex items-center justify-between">
+								<span className="text-sm text-kumo-subtle">
+									{accounts.length} mailbox{accounts.length !== 1 ? "es" : ""}
+								</span>
+								{!isConfigured && (
+									<Button
+										variant="ghost"
 										size="sm"
-										value={newPrefix}
-										onChange={(e) => setNewPrefix(e.target.value)}
-										required
-									/>
-								</div>
-								<span className="text-sm text-kumo-subtle">@</span>
-								{domains.length > 1 ? (
-									<div className="flex-1">
-							<Select
-								aria-label="Domain"
-								value={selectedDomain}
-								onValueChange={(value) => {
-									if (value) setSelectedDomain(value);
-								}}
-							>
-											{domains.map((d) => (
-												<Select.Option key={d} value={d}>
-													{d}
-												</Select.Option>
-											))}
-										</Select>
-									</div>
-								) : (
-									<span className="text-sm text-kumo-subtle">
-										{selectedDomain || "no domain"}
-									</span>
-								)}
-							</div>
-						</div>
-						<Input
-							label="Display Name (optional)"
-							placeholder="Info"
-							size="sm"
-							value={newName}
-							onChange={(e) => setNewName(e.target.value)}
-						/>
-						<div className="flex justify-end gap-2 pt-2">
-							<Dialog.Close
-								render={(props) => (
-									<Button {...props} variant="secondary" size="sm">
-										Cancel
+										icon={<PlusIcon size={14} />}
+										onClick={() => {
+											setIsManageOpen(false);
+											setIsCreateOpen(true);
+										}}
+									>
+										New
 									</Button>
 								)}
-							/>
-							<Button
-								type="submit"
-								variant="primary"
-								size="sm"
-								loading={isCreating}
-								disabled={!selectedDomain}
-							>
-								Create
+							</div>
+							<div className="rounded-xl border border-kumo-line bg-kumo-base overflow-hidden max-h-64 overflow-y-auto">
+								{accounts.map((account, idx) => (
+									<RouterLink
+										key={account.id}
+										to={`/mailbox/${account.id}`}
+										className={`group flex items-center gap-4 px-4 py-3 no-underline transition-colors hover:bg-kumo-tint ${
+											idx > 0 ? "border-t border-kumo-line" : ""
+										}`}
+									>
+										<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-kumo-fill text-xs font-bold text-kumo-default">
+											{account.name.charAt(0).toUpperCase()}
+										</div>
+										<div className="min-w-0 flex-1">
+											<div className="text-sm font-medium text-kumo-default truncate">
+												{account.name}
+											</div>
+											<div className="text-xs text-kumo-subtle truncate">
+												{account.email}
+											</div>
+										</div>
+										{!isConfigured && (
+											<Button
+												variant="ghost"
+												size="sm"
+												shape="square"
+												icon={<TrashIcon size={14} />}
+												aria-label={`Delete mailbox ${account.email}`}
+												onClick={(e) => {
+													e.preventDefault();
+													e.stopPropagation();
+													setMailboxToDelete({
+														id: account.id,
+														email: account.email,
+													});
+													setIsDeleteOpen(true);
+												}}
+											/>
+										)}
+									</RouterLink>
+								))}
+							</div>
+						</div>
+						<div className="mt-6 flex justify-end">
+							<Button variant="secondary" size="sm" onClick={() => setIsManageOpen(false)}>
+								Done
 							</Button>
 						</div>
-					</form>
-				</Dialog>
-			</Dialog.Root>
+					</div>
+				</div>
+			)}
 
-			{/* Delete Dialog */}
-			<Dialog.Root
-				open={isDeleteOpen}
-				onOpenChange={(open) => {
-					setIsDeleteOpen(open);
-					if (!open) setMailboxToDelete(null);
-				}}
-			>
-				<Dialog size="sm" className="p-6">
-					<Dialog.Title className="text-base font-semibold mb-2">
-						Delete Mailbox
-					</Dialog.Title>
-					<Dialog.Description className="text-kumo-subtle text-sm mb-5">
-						Are you sure you want to delete{" "}
-						<strong className="text-kumo-default">
-							{mailboxToDelete?.email}
-						</strong>
-						? This action cannot be undone.
-					</Dialog.Description>
-					<div className="flex justify-end gap-2">
-						<Dialog.Close
-							render={(props) => (
-								<Button {...props} variant="secondary" size="sm">
+			{/* Create Dialog */}
+			{isCreateOpen && (
+				<div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+					<div 
+						className="absolute inset-0 bg-black/30 transition-opacity" 
+						onClick={() => setIsCreateOpen(false)} 
+					/>
+					<div className="relative bg-white rounded-lg shadow-xl w-full max-w-sm pointer-events-auto p-6 animate-in fade-in zoom-in-95 duration-200">
+						<div className="text-base font-semibold mb-5 text-kumo-default">
+							Create New Mailbox
+						</div>
+						<form onSubmit={handleCreate} className="space-y-4">
+							{createError && (
+								<Text variant="error" size="sm">
+									{createError}
+								</Text>
+							)}
+							<div>
+								<span className="text-sm font-medium text-kumo-default mb-1.5 block">
+									Email Address
+								</span>
+								<div className="flex items-center gap-2">
+									<div className="flex-1">
+										<Input
+											aria-label="Address prefix"
+											placeholder="info"
+											size="sm"
+											value={newPrefix}
+											onChange={(e) => setNewPrefix(e.target.value)}
+											required
+										/>
+									</div>
+									<span className="text-sm text-kumo-subtle">@</span>
+									{domains.length > 1 ? (
+										<div className="flex-1">
+											<Select
+												aria-label="Domain"
+												value={selectedDomain}
+												onValueChange={(value) => {
+													if (value) setSelectedDomain(value);
+												}}
+											>
+												{domains.map((d) => (
+													<Select.Option key={d} value={d}>
+														{d}
+													</Select.Option>
+												))}
+											</Select>
+										</div>
+									) : (
+										<span className="text-sm text-kumo-subtle">
+											{selectedDomain || "no domain"}
+										</span>
+									)}
+								</div>
+							</div>
+							<Input
+								label="Display Name (optional)"
+								placeholder="Info"
+								size="sm"
+								value={newName}
+								onChange={(e) => setNewName(e.target.value)}
+							/>
+							<div className="flex justify-end gap-2 pt-2">
+								<Button variant="secondary" size="sm" onClick={() => setIsCreateOpen(false)}>
 									Cancel
 								</Button>
-							)}
-						/>
-						<Button
-							variant="destructive"
-							size="sm"
-							loading={isDeleting}
-							onClick={handleDelete}
-						>
-							Delete
-						</Button>
+								<Button
+									type="submit"
+									variant="primary"
+									size="sm"
+									loading={isCreating}
+									disabled={!selectedDomain}
+								>
+									Create
+								</Button>
+							</div>
+						</form>
 					</div>
-				</Dialog>
-			</Dialog.Root>
+				</div>
+			)}
+
+			{/* Delete Dialog */}
+			{isDeleteOpen && (
+				<div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+					<div 
+						className="absolute inset-0 bg-black/30 transition-opacity" 
+						onClick={() => {
+							setIsDeleteOpen(false);
+							setMailboxToDelete(null);
+						}} 
+					/>
+					<div className="relative bg-white rounded-lg shadow-xl w-full max-w-sm pointer-events-auto p-6 animate-in fade-in zoom-in-95 duration-200">
+						<div className="text-base font-semibold mb-2 text-kumo-default">
+							Delete Mailbox
+						</div>
+						<div className="text-kumo-subtle text-sm mb-5">
+							Are you sure you want to delete{" "}
+							<strong className="text-kumo-default">
+								{mailboxToDelete?.email}
+							</strong>
+							? This action cannot be undone.
+						</div>
+						<div className="flex justify-end gap-2">
+							<Button variant="secondary" size="sm" onClick={() => {
+								setIsDeleteOpen(false);
+								setMailboxToDelete(null);
+							}}>
+								Cancel
+							</Button>
+							<Button
+								variant="destructive"
+								size="sm"
+								loading={isDeleting}
+								onClick={handleDelete}
+							>
+								Delete
+							</Button>
+						</div>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }

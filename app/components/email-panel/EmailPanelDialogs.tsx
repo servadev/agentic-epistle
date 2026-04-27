@@ -75,129 +75,126 @@ export default function EmailPanelDialogs({
 
 	return (
 		<>
-			<Dialog.Root
-				open={sourceViewEmail !== null}
-				onOpenChange={(open) => {
-					if (!open) onCloseSource();
-				}}
-			>
-				<Dialog size="lg">
-					<Dialog.Title>
-						Email Source Headers
+			{sourceViewEmail !== null && (
+				<div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+					<div 
+						className="absolute inset-0 bg-black/30 transition-opacity" 
+						onClick={onCloseSource} 
+					/>
+					<div className="relative bg-white rounded-lg shadow-xl w-full max-w-3xl pointer-events-auto p-6 animate-in fade-in zoom-in-95 duration-200">
+						<h2 className="text-xl font-semibold mb-4 text-kumo-default flex items-center">
+							Email Source Headers
+							{sourceViewEmail && (
+								<span className="text-sm font-normal text-kumo-subtle ml-2 truncate">
+									{sourceViewEmail.subject}
+								</span>
+							)}
+						</h2>
 						{sourceViewEmail && (
-							<span className="text-sm font-normal text-kumo-subtle ml-2">
-								{sourceViewEmail.subject}
-							</span>
+							<div className="mt-4 max-h-[60vh] overflow-y-auto">
+								<table className="w-full text-sm border-collapse">
+									<tbody>
+										{sourceHeaders.map((header, idx) => (
+											<tr
+												key={`${header.key}-${idx}`}
+												className={idx % 2 === 0 ? "bg-kumo-tint/50" : ""}
+											>
+												<td className="py-1.5 px-3 font-mono font-semibold text-kumo-default whitespace-nowrap align-top w-[160px]">
+													{header.key}
+												</td>
+												<td className="py-1.5 px-3 font-mono text-kumo-subtle break-all">
+													{header.value}
+												</td>
+											</tr>
+										))}
+									</tbody>
+								</table>
+								{sourceHeaders.length === 0 && (
+									<p className="text-sm text-kumo-subtle text-center py-8">
+										No header data available for this email.
+									</p>
+								)}
+							</div>
 						)}
-					</Dialog.Title>
-					{sourceViewEmail && (
-						<div className="mt-4 max-h-[60vh] overflow-y-auto">
-							<table className="w-full text-sm border-collapse">
-								<tbody>
-									{sourceHeaders.map((header, idx) => (
-										<tr
-											key={`${header.key}-${idx}`}
-											className={idx % 2 === 0 ? "bg-kumo-tint/50" : ""}
-										>
-											<td className="py-1.5 px-3 font-mono font-semibold text-kumo-default whitespace-nowrap align-top w-[160px]">
-												{header.key}
-											</td>
-											<td className="py-1.5 px-3 font-mono text-kumo-subtle break-all">
-												{header.value}
-											</td>
-										</tr>
-									))}
-								</tbody>
-							</table>
-							{sourceHeaders.length === 0 && (
-								<p className="text-sm text-kumo-subtle text-center py-8">
-									No header data available for this email.
-								</p>
-							)}
-						</div>
-					)}
-					<div className="flex justify-end mt-4">
-						<Dialog.Close>
-							<Button variant="secondary" size="sm">
+						<div className="flex justify-end mt-4">
+							<Button variant="secondary" size="sm" onClick={onCloseSource}>
 								Close
 							</Button>
-						</Dialog.Close>
-					</div>
-				</Dialog>
-			</Dialog.Root>
-
-			<Dialog.Root
-				open={previewImage !== null}
-				onOpenChange={(open) => {
-					if (!open) onClosePreview();
-				}}
-			>
-				<Dialog size="lg">
-					<Dialog.Title>{previewImage?.filename}</Dialog.Title>
-					{previewImage && (
-						<div className="mt-4 flex flex-col items-center justify-center bg-kumo-tint/30 rounded-lg p-4 min-h-[200px]">
-							<img
-								src={previewImage.url}
-								alt={previewImage.filename}
-								className="max-w-full max-h-[70vh] object-contain rounded shadow-sm"
-							/>
 						</div>
-					)}
-					<div className="flex justify-between items-center mt-4">
-						<Button
-							variant="secondary"
-							size="sm"
-							onClick={() => {
-								if (previewImage) {
-									downloadFile(previewImage.url, previewImage.filename);
-								}
-							}}
-						>
-							Download Original
-						</Button>
-						<Dialog.Close>
-							<Button variant="primary" size="sm">
+					</div>
+				</div>
+			)}
+
+			{previewImage !== null && (
+				<div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+					<div 
+						className="absolute inset-0 bg-black/30 transition-opacity" 
+						onClick={onClosePreview} 
+					/>
+					<div className="relative bg-white rounded-lg shadow-xl w-full max-w-4xl pointer-events-auto p-6 animate-in fade-in zoom-in-95 duration-200 flex flex-col">
+						<h2 className="text-xl font-semibold mb-4 text-kumo-default truncate">
+							{previewImage?.filename}
+						</h2>
+						{previewImage && (
+							<div className="flex-1 min-h-0 flex flex-col items-center justify-center bg-kumo-tint/30 rounded-lg p-4">
+								<img
+									src={previewImage.url}
+									alt={previewImage.filename}
+									className="max-w-full max-h-[70vh] object-contain rounded shadow-sm"
+								/>
+							</div>
+						)}
+						<div className="flex justify-between items-center mt-4">
+							<Button
+								variant="secondary"
+								size="sm"
+								onClick={() => {
+									if (previewImage) {
+										downloadFile(previewImage.url, previewImage.filename);
+									}
+								}}
+							>
+								Download Original
+							</Button>
+							<Button variant="primary" size="sm" onClick={onClosePreview}>
 								Close
 							</Button>
-						</Dialog.Close>
+						</div>
 					</div>
-				</Dialog>
-			</Dialog.Root>
+				</div>
+			)}
 
-			<Dialog.Root
-				open={isDeleteConfirmOpen}
-				onOpenChange={(open) => {
-					if (!open) onCloseDeleteConfirm();
-				}}
-			>
-				<Dialog size="sm" className="p-6">
-					<Dialog.Title className="text-base font-semibold mb-2">
-						{isTrashFolder ? "Delete Email Permanently" : "Move to Trash"}
-					</Dialog.Title>
-					<Dialog.Description className="text-kumo-subtle text-sm mb-5">
-						{isTrashFolder
-							? "Are you sure you want to permanently delete this email? This action cannot be undone."
-							: "Are you sure you want to move this email to the trash?"}
-					</Dialog.Description>
-					<div className="flex justify-end gap-2">
-						<Dialog.Close
-							render={(props) => (
-								<Button {...props} variant="secondary" size="sm">
-									Cancel
-								</Button>
-							)}
-						/>
-						<Button
-							variant="destructive"
-							size="sm"
-							loading={isDeleting}
-							onClick={onConfirmDelete}
-						>
-							{isTrashFolder ? "Delete" : "Move to Trash"}
-						</Button>
+			{isDeleteConfirmOpen && (
+				<div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+					<div 
+						className="absolute inset-0 bg-black/30 transition-opacity" 
+						onClick={onCloseDeleteConfirm} 
+					/>
+					<div className="relative bg-white rounded-lg shadow-xl w-full max-w-sm pointer-events-auto p-6 animate-in fade-in zoom-in-95 duration-200">
+						<h2 className="text-base font-semibold mb-2 text-kumo-default">
+							{isTrashFolder ? "Delete Email Permanently" : "Move to Trash"}
+						</h2>
+						<p className="text-kumo-subtle text-sm mb-5">
+							{isTrashFolder
+								? "Are you sure you want to permanently delete this email? This action cannot be undone."
+								: "Are you sure you want to move this email to the trash?"}
+						</p>
+						<div className="flex justify-end gap-2">
+							<Button variant="secondary" size="sm" onClick={onCloseDeleteConfirm}>
+								Cancel
+							</Button>
+							<Button
+								variant="destructive"
+								size="sm"
+								loading={isDeleting}
+								onClick={onConfirmDelete}
+							>
+								{isTrashFolder ? "Delete" : "Move to Trash"}
+							</Button>
+						</div>
 					</div>
-				</Dialog>
-			</Dialog.Root>
+				</div>
+			)}
 		</>
 	);
 }

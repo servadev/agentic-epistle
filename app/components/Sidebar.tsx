@@ -265,41 +265,40 @@ export default function Sidebar() {
 			</nav>
 
 			{/* Create folder dialog */}
-			<Dialog.Root
-				open={isCreateFolderOpen}
-				onOpenChange={setIsCreateFolderOpen}
-			>
-				<Dialog size="sm" className="p-6">
-					<Dialog.Title className="text-base font-semibold mb-4">
-						Create folder
-					</Dialog.Title>
-					<form onSubmit={handleCreateFolder} className="space-y-4">
-						<Input
-							label="Folder name"
-							placeholder="e.g. Projects"
-							value={newFolderName}
-							onChange={(e) => setNewFolderName(e.target.value)}
-							required
-						/>
-						<div className="flex justify-end gap-2">
-							<Dialog.Close
-								render={(props) => (
-									<Button {...props} variant="secondary">
-										Cancel
-									</Button>
-								)}
-							/>
-							<Button
-								type="submit"
-								variant="primary"
-								disabled={!newFolderName.trim()}
-							>
-								Create
-							</Button>
+			{isCreateFolderOpen && (
+				<div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+					<div 
+						className="absolute inset-0 bg-black/30 transition-opacity" 
+						onClick={() => setIsCreateFolderOpen(false)} 
+					/>
+					<div className="relative bg-white rounded-lg shadow-xl w-full max-w-sm pointer-events-auto p-6 animate-in fade-in zoom-in-95 duration-200">
+						<div className="text-base font-semibold mb-4 text-kumo-default">
+							Create folder
 						</div>
-					</form>
-				</Dialog>
-			</Dialog.Root>
+						<form onSubmit={handleCreateFolder} className="space-y-4">
+							<Input
+								label="Folder name"
+								placeholder="e.g. Projects"
+								value={newFolderName}
+								onChange={(e) => setNewFolderName(e.target.value)}
+								required
+							/>
+							<div className="flex justify-end gap-2">
+								<Button type="button" variant="secondary" onClick={() => setIsCreateFolderOpen(false)}>
+									Cancel
+								</Button>
+								<Button
+									type="submit"
+									variant="primary"
+									disabled={!newFolderName.trim()}
+								>
+									Create
+								</Button>
+							</div>
+						</form>
+					</div>
+				</div>
+			)}
 		</aside>
 	);
 }

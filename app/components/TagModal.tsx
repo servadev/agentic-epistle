@@ -114,19 +114,20 @@ export default function TagModal({
 		});
 	};
 
+	if (!isOpen) return null;
+
 	return (
-		<Dialog.Root
-			open={isOpen}
-			onOpenChange={(open) => {
-				if (!open) onClose();
-			}}
-		>
-			<Dialog size="sm" className="p-0 overflow-hidden">
+		<div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+			<div 
+				className="absolute inset-0 bg-black/30 transition-opacity" 
+				onClick={onClose} 
+			/>
+			<div className="relative bg-white rounded-lg shadow-xl w-full max-w-sm pointer-events-auto flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
 				<div className="flex items-center justify-between px-4 py-3 border-b border-kumo-line">
-					<Dialog.Title className="text-base font-semibold flex items-center gap-2">
+					<div className="text-base font-semibold flex items-center gap-2">
 						<TagIcon size={18} className="text-kumo-subtle" />
 						Tags
-					</Dialog.Title>
+					</div>
 					<Button
 						variant="ghost"
 						shape="square"
@@ -230,7 +231,7 @@ export default function TagModal({
 						</div>
 					)}
 				</div>
-			</Dialog>
-		</Dialog.Root>
+			</div>
+		</div>
 	);
 }

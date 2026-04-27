@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useParams, Link } from "react-router";
-import { Button, Input, useKumoToastManager } from "@cloudflare/kumo";
+import { Button, Input, Tooltip, useKumoToastManager } from "@cloudflare/kumo";
 import {
   PlusIcon,
   XIcon,
@@ -350,25 +350,13 @@ export default function ContactsRoute() {
                   </div>
                   
                   <div className="hidden group-hover:flex group-focus-within:flex items-center shrink-0 absolute top-1/2 -translate-y-1/2 right-4 bg-white/90 backdrop-blur rounded-md shadow-sm border border-slate-200 z-10">
-                    <button
-                      type="button"
-                      tabIndex={0}
-                      className="p-1.5 text-slate-400 hover:text-slate-900 focus:text-slate-900 transition-colors border-r border-slate-200"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedContact(contact);
-                        setEditForm({
-                          name: contact.name,
-                          email: contact.email,
-                          phone: contact.phone,
-                          org: contact.org,
-                          notes: contact.notes,
-                        });
-                        setIsEditOpen(true);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
+                    <Tooltip content="Edit contact" asChild>
+                      <Button
+                        variant="ghost"
+                        shape="square"
+                        size="sm"
+                        icon={<PencilSimpleIcon size={14} />}
+                        onClick={(e) => {
                           e.stopPropagation();
                           setSelectedContact(contact);
                           setEditForm({
@@ -379,33 +367,47 @@ export default function ContactsRoute() {
                             notes: contact.notes,
                           });
                           setIsEditOpen(true);
-                        }
-                      }}
-                      aria-label="Edit contact"
-                    >
-                      <PencilSimpleIcon size={16} />
-                    </button>
-                    <button
-                      type="button"
-                      tabIndex={0}
-                      className="p-1.5 text-slate-400 hover:text-red-600 focus:text-red-600 transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedContact(contact);
-                        setIsDeleteConfirmOpen(true);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setSelectedContact(contact);
+                            setEditForm({
+                              name: contact.name,
+                              email: contact.email,
+                              phone: contact.phone,
+                              org: contact.org,
+                              notes: contact.notes,
+                            });
+                            setIsEditOpen(true);
+                          }
+                        }}
+                        aria-label="Edit contact"
+                      />
+                    </Tooltip>
+                    <Tooltip content="Delete contact" asChild>
+                      <Button
+                        variant="ghost"
+                        shape="square"
+                        size="sm"
+                        icon={<TrashIcon size={14} />}
+                        onClick={(e) => {
                           e.stopPropagation();
                           setSelectedContact(contact);
                           setIsDeleteConfirmOpen(true);
-                        }
-                      }}
-                      aria-label="Delete contact"
-                    >
-                      <TrashIcon size={16} />
-                    </button>
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setSelectedContact(contact);
+                            setIsDeleteConfirmOpen(true);
+                          }
+                        }}
+                        aria-label="Delete contact"
+                      />
+                    </Tooltip>
                   </div>
                 </button>
               ))}
@@ -696,8 +698,12 @@ export default function ContactsRoute() {
 
       {/* Avatar Upload Modal */}
       {isAvatarModalOpen && selectedContact && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-kumo-base rounded-lg shadow-lg w-full max-w-sm overflow-hidden flex flex-col p-6">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div 
+            className="absolute inset-0 bg-black/30 transition-opacity" 
+            onClick={() => setIsAvatarModalOpen(false)} 
+          />
+          <div className="relative bg-white rounded-lg shadow-xl w-full max-w-sm pointer-events-auto p-6 animate-in fade-in zoom-in-95 duration-200 flex flex-col">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-kumo-default">
                 Update Avatar
@@ -751,8 +757,12 @@ export default function ContactsRoute() {
 
       {/* Delete Confirmation Modal */}
       {isDeleteConfirmOpen && selectedContact && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-kumo-base rounded-lg shadow-lg w-full max-w-sm overflow-hidden flex flex-col p-6">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div 
+            className="absolute inset-0 bg-black/30 transition-opacity" 
+            onClick={() => setIsDeleteConfirmOpen(false)} 
+          />
+          <div className="relative bg-white rounded-lg shadow-xl w-full max-w-sm pointer-events-auto p-6 animate-in fade-in zoom-in-95 duration-200 flex flex-col">
             <h2 className="text-lg font-semibold text-kumo-default mb-2">
               Delete Contact
             </h2>

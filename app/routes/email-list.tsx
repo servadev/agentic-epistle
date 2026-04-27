@@ -764,70 +764,74 @@ export default function EmailListRoute() {
 			)}
 
 			{/* Delete Email Dialog */}
-			<Dialog.Root
-				open={isDeleteConfirmOpen}
-				onOpenChange={(open) => {
-					setIsDeleteConfirmOpen(open);
-					if (!open) setEmailToDelete(null);
-				}}
-			>
-				<Dialog size="sm" className="p-6">
-					<Dialog.Title className="text-base font-semibold mb-2">
-						{folder === Folders.TRASH ? "Delete Email Permanently" : "Move to Trash"}
-					</Dialog.Title>
-					<Dialog.Description className="text-kumo-subtle text-sm mb-5">
-						{folder === Folders.TRASH
-							? "Are you sure you want to permanently delete this email? This action cannot be undone."
-							: "Are you sure you want to move this email to the trash?"}
-					</Dialog.Description>
-					<div className="flex justify-end gap-2">
-						<Dialog.Close
-							render={(props) => (
-								<Button {...props} variant="secondary" size="sm">
-									Cancel
-								</Button>
-							)}
-						/>
-						<Button
-							variant="destructive"
-							size="sm"
-							loading={deleteEmail.isPending || moveEmail.isPending}
-							onClick={executeDelete}
-						>
-							{folder === Folders.TRASH ? "Delete" : "Move to Trash"}
-						</Button>
+			{isDeleteConfirmOpen && (
+				<div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+					<div 
+						className="absolute inset-0 bg-black/30 transition-opacity" 
+						onClick={() => {
+							setIsDeleteConfirmOpen(false);
+							setEmailToDelete(null);
+						}} 
+					/>
+					<div className="relative bg-white rounded-lg shadow-xl w-full max-w-sm pointer-events-auto p-6 animate-in fade-in zoom-in-95 duration-200">
+						<h2 className="text-base font-semibold mb-2 text-kumo-default">
+							{folder === Folders.TRASH ? "Delete Email Permanently" : "Move to Trash"}
+						</h2>
+						<p className="text-kumo-subtle text-sm mb-5">
+							{folder === Folders.TRASH
+								? "Are you sure you want to permanently delete this email? This action cannot be undone."
+								: "Are you sure you want to move this email to the trash?"}
+						</p>
+						<div className="flex justify-end gap-2">
+							<Button variant="secondary" size="sm" onClick={() => {
+								setIsDeleteConfirmOpen(false);
+								setEmailToDelete(null);
+							}}>
+								Cancel
+							</Button>
+							<Button
+								variant="destructive"
+								size="sm"
+								loading={deleteEmail.isPending || moveEmail.isPending}
+								onClick={executeDelete}
+							>
+								{folder === Folders.TRASH ? "Delete" : "Move to Trash"}
+							</Button>
+						</div>
 					</div>
-				</Dialog>
-			</Dialog.Root>
+				</div>
+			)}
 
 			{/* Empty Trash Dialog */}
-			<Dialog.Root open={isEmptyTrashConfirmOpen} onOpenChange={setIsEmptyTrashConfirmOpen}>
-				<Dialog size="sm" className="p-6">
-					<Dialog.Title className="text-base font-semibold mb-2">
-						Empty Trash
-					</Dialog.Title>
-					<Dialog.Description className="text-kumo-subtle text-sm mb-5">
-						Are you sure you want to permanently delete all emails in the Trash folder? This action cannot be undone.
-					</Dialog.Description>
-					<div className="flex justify-end gap-2">
-						<Dialog.Close
-							render={(props) => (
-								<Button {...props} variant="secondary" size="sm">
-									Cancel
-								</Button>
-							)}
-						/>
-						<Button
-							variant="destructive"
-							size="sm"
-							loading={emptyTrash.isPending}
-							onClick={executeEmptyTrash}
-						>
+			{isEmptyTrashConfirmOpen && (
+				<div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+					<div 
+						className="absolute inset-0 bg-black/30 transition-opacity" 
+						onClick={() => setIsEmptyTrashConfirmOpen(false)} 
+					/>
+					<div className="relative bg-white rounded-lg shadow-xl w-full max-w-sm pointer-events-auto p-6 animate-in fade-in zoom-in-95 duration-200">
+						<h2 className="text-base font-semibold mb-2 text-kumo-default">
 							Empty Trash
-						</Button>
+						</h2>
+						<p className="text-kumo-subtle text-sm mb-5">
+							Are you sure you want to permanently delete all emails in the Trash folder? This action cannot be undone.
+						</p>
+						<div className="flex justify-end gap-2">
+							<Button variant="secondary" size="sm" onClick={() => setIsEmptyTrashConfirmOpen(false)}>
+								Cancel
+							</Button>
+							<Button
+								variant="destructive"
+								size="sm"
+								loading={emptyTrash.isPending}
+								onClick={executeEmptyTrash}
+							>
+								Empty Trash
+							</Button>
+						</div>
 					</div>
-				</Dialog>
-			</Dialog.Root>
+				</div>
+			)}
 		</MailboxSplitView>
 	);
 }
