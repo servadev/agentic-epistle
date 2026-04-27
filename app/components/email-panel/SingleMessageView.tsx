@@ -10,7 +10,7 @@ import {
 import { useContacts } from "~/queries/contacts";
 import type { Email } from "~/types";
 import { useSuggestedEvents, useCreateEvent, useDeleteEvent } from "~/queries/calendar";
-import { CalendarPlus, CalendarX } from "@phosphor-icons/react";
+import { CalendarPlus, CalendarX, TrashIcon } from "@phosphor-icons/react";
 import { Button, useKumoToastManager } from "@cloudflare/kumo";
 
 interface SingleMessageViewProps {
@@ -117,40 +117,60 @@ export default function SingleMessageView({
 				</div>
 				
 				{suggestedEvents && suggestedEvents.length > 0 && (
-					<div className="px-4 py-3 bg-blue-50/50 border-t border-blue-100 dark:bg-blue-950/20 dark:border-blue-900/50 flex flex-col gap-3 shrink-0">
-						<div className="text-sm font-medium text-blue-800 dark:text-blue-300 flex items-center gap-2">
-							<CalendarPlus className="h-4 w-4" />
-							Suggested Meetings
-						</div>
-						{suggestedEvents.map((event) => (
-							<div key={event.id} className="bg-white dark:bg-gray-900 border border-blue-200 dark:border-blue-800 rounded-md p-3 shadow-sm flex items-center justify-between gap-4">
-								<div className="min-w-0 flex-1">
-									<div className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">
-										{event.title}
+					<div className="mt-4 flex flex-col gap-3">
+						{suggestedEvents.map((event) => {
+							const startDate = new Date(event.start_at);
+							const month = startDate.toLocaleString('default', { month: 'short' });
+							const day = startDate.getDate();
+							
+							const startTime = startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+							const endTime = new Date(event.end_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+
+							return (
+								<div key={event.id} className="bg-white dark:bg-slate-900 border border-teal-500/40 rounded-xl p-3 shadow-sm flex items-center justify-between gap-4 w-full md:w-max md:min-w-[480px]">
+									<div className="flex items-center gap-4 min-w-0">
+										{/* Calendar Date Icon */}
+										<div className="flex flex-col items-center justify-center bg-teal-600 text-white rounded-lg w-12 h-12 overflow-hidden shrink-0 shadow-sm">
+											<div className="text-[10px] uppercase font-bold bg-teal-700/80 w-full text-center py-0.5 tracking-wider">{month}</div>
+											<div className="text-lg font-bold leading-none py-1">{day}</div>
+										</div>
+										
+										{/* Event Info */}
+										<div className="min-w-0 flex-1">
+											<div className="text-xs font-medium text-teal-700 dark:text-teal-400 flex items-center gap-2">
+												Add this meeting to your calendar?
+												<button className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 font-semibold transition-colors">Edit</button>
+											</div>
+											<div className="font-bold text-sm text-slate-900 dark:text-slate-100 truncate mt-0.5">
+												{event.title}
+											</div>
+											<div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+												{startTime}-{endTime}
+											</div>
+										</div>
 									</div>
-									<div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-										{new Date(event.start_at).toLocaleString()} - {new Date(event.end_at).toLocaleTimeString()}
+
+									{/* Actions */}
+									<div className="flex items-center gap-2 shrink-0 pl-2">
+										<Button 
+											size="sm" 
+											variant="outline" 
+											className="h-8 px-4 text-xs font-medium border-slate-300 text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 rounded-lg"
+											onClick={() => handleDismissEvent(event.id)}
+										>
+											Reject
+										</Button>
+										<Button 
+											size="sm" 
+											className="h-8 px-4 text-xs font-medium bg-indigo-700 hover:bg-indigo-800 text-white rounded-lg border-0 shadow-sm"
+											onClick={() => handleAddEvent(event)}
+										>
+											Accept
+										</Button>
 									</div>
 								</div>
-								<div className="flex items-center gap-2 shrink-0">
-									<Button 
-										size="sm" 
-										variant="outline" 
-										className="h-8 text-xs border-blue-200 hover:bg-blue-50 dark:border-blue-800 dark:hover:bg-blue-900/30"
-										onClick={() => handleDismissEvent(event.id)}
-									>
-										Dismiss
-									</Button>
-									<Button 
-										size="sm" 
-										className="h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white"
-										onClick={() => handleAddEvent(event)}
-									>
-										Add to Calendar
-									</Button>
-								</div>
-							</div>
-						))}
+							);
+						})}
 					</div>
 				)}
 			</div>

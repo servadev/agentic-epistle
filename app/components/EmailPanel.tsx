@@ -204,10 +204,26 @@ export default function EmailPanel({ emailId }: { emailId: string }) {
 				{hasThread ? (
 					allMessages.map((msg, idx) => {
 						const isDraft = draftMessageIds.has(msg.id);
+						let suggestedEventsEmailId = msg.id;
+						if (isDraft) {
+							// Find the email this draft is replying to
+							const repliedTo = allMessages.find(m => m.message_id === msg.in_reply_to || m.id === msg.in_reply_to);
+							if (repliedTo) {
+								suggestedEventsEmailId = repliedTo.id;
+							} else {
+								// Fallback: the message before the draft
+								const prevMsg = allMessages[idx - 1];
+								if (prevMsg) {
+									suggestedEventsEmailId = prevMsg.id;
+								}
+							}
+						}
+
 						return (
 							<ThreadMessage
 								key={msg.id}
 								email={msg}
+								suggestedEventsEmailId={suggestedEventsEmailId}
 								mailboxId={mailboxId}
 								mailboxEmail={currentMailbox?.email}
 								isLast={idx === allMessages.length - 1}
