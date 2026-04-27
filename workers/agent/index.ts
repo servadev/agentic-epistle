@@ -565,14 +565,13 @@ export class EmailAgent extends AIChatAgent<any> {
 			console.warn("Pre-read failed, agent will use tools:", (e as Error).message);
 		}
 
-		let autoPrompt = `A new email just arrived. Draft an appropriate response using draft_reply.
+		let autoPrompt = `Today's date and time: ${new Date().toISOString()}
 
-Email details:
-- Mailbox: ${emailData.mailboxId}
-- Email ID: ${emailData.emailId}
-- From: ${emailData.sender}
-- Subject: ${emailData.subject}
-- Thread ID: ${emailData.threadId}
+I received a new email.
+From: ${emailData.sender}
+Subject: ${emailData.subject}
+Thread ID: ${emailData.threadId}
+Email ID: ${emailData.emailId}
 
 Email body:
 ${emailBody || "(could not pre-read — use get_email to read it)"}`;
@@ -627,6 +626,10 @@ Based on the email content and thread context above:
 			const draftToolCalled = result.steps.some((step) =>
 				step.toolCalls.some((tc) => tc.toolName === "draft_reply" || tc.toolName === "draft_email"),
 			);
+			
+			const suggestEventCalled = result.steps.some((step) =>
+				step.toolCalls.some((tc) => tc.toolName === "suggest_event"),
+			);
 
 			if (!draftToolCalled && result.text.trim()) {
 				// Model generated a draft inline as text -- verify with AI
@@ -665,9 +668,14 @@ Based on the email content and thread context above:
 			// Persist the conversation into the agent's chat history
 			// If it called the tool, we just log a simple success message so the chat isn't cluttered
 			// with conversational slop.
-			const assistantText = draftToolCalled 
-				? `Created draft reply to ${emailData.sender}.`
-				: result.text;
+			let assistantText = result.text;
+			if (draftToolCalled && suggestEventCalled) {
+				assistantText = `Created draft reply to ${emailData.sender} and suggested a calendar event.`;
+			} else if (draftToolCalled) {
+				assistantText = `Created draft reply to ${emailData.sender}.`;
+			} else if (suggestEventCalled) {
+				assistantText = `Suggested a calendar event.`;
+			}
 
 			const newMessages = [
 				{

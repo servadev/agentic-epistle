@@ -30,8 +30,9 @@ import {
 	useEmails,
 	useMarkThreadRead,
 	useUpdateEmail,
+	useMoveEmail,
 } from "~/queries/emails";
-import { useFolders } from "~/queries/folders";
+import { useFolders, useEmptyTrash } from "~/queries/folders";
 import { useContacts } from "~/queries/contacts";
 import { queryKeys } from "~/queries/keys";
 import { useUIStore } from "~/hooks/useUIStore";
@@ -184,6 +185,8 @@ export default function EmailListRoute() {
 	const updateEmail = useUpdateEmail();
 	const markThreadRead = useMarkThreadRead();
 	const deleteEmail = useDeleteEmail();
+	const moveEmail = useMoveEmail();
+	const emptyTrash = useEmptyTrash();
 
 	const params = useMemo(
 		() => ({
@@ -257,10 +260,23 @@ export default function EmailListRoute() {
 		e.preventDefault();
 		e.stopPropagation();
 		if (mailboxId) {
-			const confirmed = window.confirm("Are you sure you want to delete this email?");
-			if (!confirmed) return;
-			deleteEmail.mutate({ mailboxId, id: emailId });
+			if (folder === Folders.TRASH) {
+				const confirmed = window.confirm("Are you sure you want to permanently delete this email?");
+				if (!confirmed) return;
+				deleteEmail.mutate({ mailboxId, id: emailId });
+			} else {
+				moveEmail.mutate({ mailboxId, id: emailId, folderId: Folders.TRASH });
+			}
 			if (selectedEmailId === emailId) closePanel();
+		}
+	};
+
+	const handleEmptyTrash = () => {
+		if (mailboxId) {
+			const confirmed = window.confirm("Are you sure you want to permanently delete all emails in the Trash folder?");
+			if (!confirmed) return;
+			emptyTrash.mutate(mailboxId);
+			closePanel();
 		}
 	};
 
@@ -380,11 +396,21 @@ export default function EmailListRoute() {
 					<h1 className="text-lg font-bold text-slate-900 tracking-tight">
 						{folderName}
 					</h1>
-					<div className="flex items-center gap-1">
+					<div className="flex items-center gap-2">
 						{totalCount > 0 && (
 							<span className="text-sm text-slate-500 mr-2 hidden sm:inline">
 								{totalCount} conversation{totalCount !== 1 ? "s" : ""}
 							</span>
+						)}
+						{folder === Folders.TRASH && totalCount > 0 && (
+							<Button
+								variant="destructive"
+								size="sm"
+								onClick={handleEmptyTrash}
+								loading={emptyTrash.isPending}
+							>
+								Empty
+							</Button>
 						)}
 					</div>
 				</div>

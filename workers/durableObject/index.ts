@@ -669,6 +669,45 @@ export class MailboxDO extends DurableObject<Env> {
 		return result;
 	}
 
+	async emptyTrash() {
+		const trashFolder = this.db
+			.select({ id: schema.folders.id })
+			.from(schema.folders)
+			.where(or(eq(schema.folders.id, "trash"), eq(schema.folders.name, "Trash")))
+			.get();
+
+		if (!trashFolder) return [];
+
+		const emailsInTrash = this.db
+			.select({ id: schema.emails.id })
+			.from(schema.emails)
+			.where(eq(schema.emails.folder_id, trashFolder.id))
+			.all();
+
+		if (emailsInTrash.length === 0) return [];
+
+		const emailIds = emailsInTrash.map((e) => e.id);
+
+		// Get all attachments for these emails to return so they can be deleted from R2
+		const attachmentsToDelete = this.db
+			.select({
+				id: schema.attachments.id,
+				email_id: schema.attachments.email_id,
+				filename: schema.attachments.filename,
+			})
+			.from(schema.attachments)
+			.where(sql`${schema.attachments.email_id} IN (${sql.join(emailIds, sql`, `)})`)
+			.all();
+
+		// Delete the emails (cascades to attachments in SQLite)
+		this.db
+			.delete(schema.emails)
+			.where(eq(schema.emails.folder_id, trashFolder.id))
+			.run();
+
+		return attachmentsToDelete;
+	}
+
 	async deleteFolder(id: string) {
 		const folder = this.db
 			.select({ is_deletable: schema.folders.is_deletable })

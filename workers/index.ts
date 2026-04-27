@@ -368,6 +368,14 @@ app.delete("/api/v1/mailboxes/:mailboxId/calendar/events/:eventId", async (c: Ap
 	return ok ? c.body(null, 204) : c.json({ error: "Event not found" }, 404);
 });
 
+app.post("/api/v1/mailboxes/:mailboxId/folders/trash/empty", async (c: AppContext) => {
+	const attachments = await c.var.mailboxStub.emptyTrash();
+	if (attachments && attachments.length > 0) {
+		await c.env.BUCKET.delete(attachments.map((att: any) => `attachments/${att.email_id}/${att.id}/${att.filename}`));
+	}
+	return c.body(null, 204);
+});
+
 // -- Search ---------------------------------------------------------
 
 app.get("/api/v1/mailboxes/:mailboxId/search", async (c: AppContext) => {

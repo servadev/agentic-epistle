@@ -63,3 +63,14 @@ export function useDeleteFolder() {
 		},
 	});
 }
+
+export function useEmptyTrash() {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: (mailboxId: string) => api.emptyTrash(mailboxId),
+		onSuccess: (_data, mailboxId) => {
+			qc.invalidateQueries({ queryKey: queryKeys.folders.list(mailboxId) });
+			qc.invalidateQueries({ queryKey: queryKeys.emails.list(mailboxId) });
+		},
+	});
+}

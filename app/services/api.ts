@@ -163,6 +163,8 @@ const api = {
 		put<Folder>(`/api/v1/mailboxes/${mailboxId}/folders/${id}`, { name }),
 	deleteFolder: (mailboxId: string, id: string) =>
 		del<void>(`/api/v1/mailboxes/${mailboxId}/folders/${id}`),
+	emptyTrash: (mailboxId: string) =>
+		post<void>(`/api/v1/mailboxes/${mailboxId}/folders/trash/empty`),
 
 	// Search
 	searchEmails: (mailboxId: string, params: Record<string, string>) =>
