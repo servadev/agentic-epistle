@@ -119,7 +119,7 @@ export default function EmailPanel({ emailId }: { emailId: string }) {
 
 	const executeDelete = () => {
 		if (mailboxId && email) {
-			if (folder === Folders.TRASH) {
+			if (folder === Folders.TRASH || isDraftFolder) {
 				deleteEmailMut.mutate({ mailboxId, id: email.id });
 			} else {
 				moveEmailMut.mutate({ mailboxId, id: email.id, folderId: Folders.TRASH });

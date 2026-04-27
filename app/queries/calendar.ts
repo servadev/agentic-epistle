@@ -62,6 +62,7 @@ export function useUpdateEvent() {
 			api.updateEvent(mailboxId, id, event),
 		onSuccess: (_data, { mailboxId }) => {
 			qc.invalidateQueries({ queryKey: queryKeys.calendar.all });
+			qc.invalidateQueries({ queryKey: ["suggestedEvents", mailboxId] });
 		},
 	});
 }

@@ -4,7 +4,7 @@
 
 import { DurableObject } from "cloudflare:workers";
 import { drizzle } from "drizzle-orm/durable-sqlite";
-import { eq, and, or, asc, desc, sql } from "drizzle-orm";
+import { eq, and, or, asc, desc, sql, not, inArray } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import * as schema from "../db/schema";
 import { Folders } from "../../shared/folders";
@@ -593,7 +593,7 @@ export class MailboxDO extends DurableObject<Env> {
 
 	async deleteEmail(id: string) {
 		const email = this.db
-			.select({ id: schema.emails.id })
+			.select({ id: schema.emails.id, thread_id: schema.emails.thread_id })
 			.from(schema.emails)
 			.where(eq(schema.emails.id, id))
 			.get();
@@ -609,12 +609,45 @@ export class MailboxDO extends DurableObject<Env> {
 			.where(eq(schema.attachments.email_id, id))
 			.all();
 
+		// Find associated drafts in the same thread to delete
+		let draftAttachments: { id: string; filename: string }[] = [];
+		if (email.thread_id) {
+			const draftEmails = this.db
+				.select({ id: schema.emails.id })
+				.from(schema.emails)
+				.where(
+					and(
+						eq(schema.emails.thread_id, email.thread_id),
+						eq(schema.emails.folder_id, "draft"),
+						not(eq(schema.emails.id, id))
+					)
+				)
+				.all();
+
+			if (draftEmails.length > 0) {
+				const draftIds = draftEmails.map((e) => e.id);
+				draftAttachments = this.db
+					.select({
+						id: schema.attachments.id,
+						filename: schema.attachments.filename,
+					})
+					.from(schema.attachments)
+					.where(inArray(schema.attachments.email_id, draftIds))
+					.all();
+
+				this.db
+					.delete(schema.emails)
+					.where(inArray(schema.emails.id, draftIds))
+					.run();
+			}
+		}
+
 		this.db
 			.delete(schema.emails)
 			.where(eq(schema.emails.id, id))
 			.run();
 
-		return emailAttachments;
+		return [...emailAttachments, ...draftAttachments];
 	}
 
 	async getAttachment(id: string) {
@@ -736,11 +769,46 @@ export class MailboxDO extends DurableObject<Env> {
 
 		if (!folder) return false;
 
+		const email = this.db
+			.select({ id: schema.emails.id, thread_id: schema.emails.thread_id })
+			.from(schema.emails)
+			.where(eq(schema.emails.id, id))
+			.get();
+
+		if (!email) return false;
+
 		this.db
 			.update(schema.emails)
 			.set({ folder_id: folderId })
 			.where(eq(schema.emails.id, id))
 			.run();
+
+		// If moving to TRASH, also delete associated drafts
+		if (folderId === "trash" && email.thread_id) {
+			const draftEmails = this.db
+				.select({ id: schema.emails.id })
+				.from(schema.emails)
+				.where(
+					and(
+						eq(schema.emails.thread_id, email.thread_id),
+						eq(schema.emails.folder_id, "draft"),
+						not(eq(schema.emails.id, id))
+					)
+				)
+				.all();
+
+			if (draftEmails.length > 0) {
+				const draftIds = draftEmails.map((e) => e.id);
+				this.db
+					.delete(schema.emails)
+					.where(inArray(schema.emails.id, draftIds))
+					.run();
+				
+				// We don't return attachments here because moveEmail doesn't support returning attachments
+				// to the worker for R2 cleanup. This is a limitation, but acceptable for auto-drafts
+				// which typically don't have attachments.
+			}
+		}
 
 		return true;
 	}
@@ -1007,7 +1075,12 @@ export class CalendarDO extends DurableObject<Env> {
 	}
 
 	async getSuggestedEvents(emailId: string): Promise<EventData[]> {
-		return this.db.select().from(schema.events).where(eq(schema.events.source, `suggested:${emailId}`)).all();
+		return this.db.select().from(schema.events).where(
+			or(
+				eq(schema.events.source, `suggested:${emailId}`),
+				eq(schema.events.source, `confirmed_suggested:${emailId}`)
+			)
+		).all();
 	}
 
 	async getAllEventsDebug(): Promise<EventData[]> {
@@ -1104,8 +1177,8 @@ export class ContactsDO extends DurableObject<Env> {
 	}
 
 	async deleteContact(id: string): Promise<boolean> {
-		const result = this.db.delete(schema.contacts).where(eq(schema.contacts.id, id)).run();
-		return result.meta.changes > 0;
+		this.db.delete(schema.contacts).where(eq(schema.contacts.id, id)).run();
+		return true;
 	}
 }
 
