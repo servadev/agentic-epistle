@@ -15,6 +15,7 @@ import {
 import { EnvelopeIcon, PlusIcon, TrashIcon, UserIcon, MagnifyingGlassIcon, PencilSimpleIcon } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import { type FormEvent, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link as RouterLink, useNavigate } from "react-router";
 import api from "~/services/api";
 import { safeGetStorage } from "~/lib/utils";
@@ -508,7 +509,7 @@ export default function HomeRoute() {
 			</div>
 
 			{/* Manage Mailboxes Dialog */}
-			{isManageOpen && (
+			{isManageOpen && typeof document !== "undefined" && createPortal(
 				<div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
 					<div 
 						className="absolute inset-0 bg-black/30 transition-opacity" 
@@ -585,11 +586,12 @@ export default function HomeRoute() {
 							</Button>
 						</div>
 					</div>
-				</div>
+				</div>,
+				document.body
 			)}
 
 			{/* Create Dialog */}
-			{isCreateOpen && (
+			{isCreateOpen && typeof document !== "undefined" && createPortal(
 				<div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
 					<div 
 						className="absolute inset-0 bg-black/30 transition-opacity" 
@@ -667,11 +669,12 @@ export default function HomeRoute() {
 							</div>
 						</form>
 					</div>
-				</div>
+				</div>,
+				document.body
 			)}
 
 			{/* Delete Dialog */}
-			{isDeleteOpen && (
+			{isDeleteOpen && typeof document !== "undefined" && createPortal(
 				<div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
 					<div 
 						className="absolute inset-0 bg-black/30 transition-opacity" 
@@ -708,7 +711,8 @@ export default function HomeRoute() {
 							</Button>
 						</div>
 					</div>
-				</div>
+				</div>,
+				document.body
 			)}
 		</div>
 	);

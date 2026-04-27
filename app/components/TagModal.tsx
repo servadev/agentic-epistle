@@ -1,6 +1,7 @@
 import { Button, Dialog, Input, useKumoToastManager } from "@cloudflare/kumo";
 import { CheckIcon, PlusIcon, TagIcon, XIcon } from "@phosphor-icons/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useUpdateEmail } from "~/queries/emails";
 import { useMailbox, useUpdateMailbox } from "~/queries/mailboxes";
 import type { Email, Tag } from "~/types";
@@ -114,9 +115,9 @@ export default function TagModal({
 		});
 	};
 
-	if (!isOpen) return null;
+	if (!isOpen || typeof document === "undefined") return null;
 
-	return (
+	return createPortal(
 		<div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
 			<div 
 				className="absolute inset-0 bg-black/30 transition-opacity" 
@@ -232,6 +233,7 @@ export default function TagModal({
 					)}
 				</div>
 			</div>
-		</div>
+		</div>,
+		document.body
 	);
 }

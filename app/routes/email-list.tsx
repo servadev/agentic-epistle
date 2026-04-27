@@ -21,6 +21,7 @@ import {
 } from "@phosphor-icons/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useParams, useSearchParams } from "react-router";
 import { Folders } from "shared/folders";
 import { formatListDate, formatShortDate } from "shared/dates";
@@ -764,7 +765,7 @@ export default function EmailListRoute() {
 			)}
 
 			{/* Delete Email Dialog */}
-			{isDeleteConfirmOpen && (
+			{isDeleteConfirmOpen && typeof document !== "undefined" && createPortal(
 				<div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
 					<div 
 						className="absolute inset-0 bg-black/30 transition-opacity" 
@@ -799,11 +800,12 @@ export default function EmailListRoute() {
 							</Button>
 						</div>
 					</div>
-				</div>
+				</div>,
+				document.body
 			)}
 
 			{/* Empty Trash Dialog */}
-			{isEmptyTrashConfirmOpen && (
+			{isEmptyTrashConfirmOpen && typeof document !== "undefined" && createPortal(
 				<div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
 					<div 
 						className="absolute inset-0 bg-black/30 transition-opacity" 
@@ -830,7 +832,8 @@ export default function EmailListRoute() {
 							</Button>
 						</div>
 					</div>
-				</div>
+				</div>,
+				document.body
 			)}
 		</MailboxSplitView>
 	);

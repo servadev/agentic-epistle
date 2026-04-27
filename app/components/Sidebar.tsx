@@ -17,6 +17,7 @@ import {
 } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
 import { NavLink, useLocation, useNavigate, useParams } from "react-router";
+import { createPortal } from "react-dom";
 import { Folders, SYSTEM_FOLDER_IDS } from "shared/folders";
 import { useCreateFolder, useFolders } from "~/queries/folders";
 import { useMailbox } from "~/queries/mailboxes";
@@ -265,7 +266,7 @@ export default function Sidebar() {
 			</nav>
 
 			{/* Create folder dialog */}
-			{isCreateFolderOpen && (
+			{isCreateFolderOpen && typeof document !== "undefined" && createPortal(
 				<div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
 					<div 
 						className="absolute inset-0 bg-black/30 transition-opacity" 
@@ -297,7 +298,8 @@ export default function Sidebar() {
 							</div>
 						</form>
 					</div>
-				</div>
+				</div>,
+				document.body
 			)}
 		</aside>
 	);

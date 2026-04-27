@@ -2,6 +2,7 @@
 // Licensed under the Apache 2.0 license found in the LICENSE file or at:
 //     https://opensource.org/licenses/Apache-2.0
 
+import { createPortal } from "react-dom";
 import { Banner, Button, Dialog, Input, Text } from "@cloudflare/kumo";
 import { FloppyDiskIcon, PaperPlaneTiltIcon } from "@phosphor-icons/react";
 import { useParams } from "react-router";
@@ -38,9 +39,9 @@ export default function ComposeEmail() {
 		handleSend,
 	} = useComposeForm(mailboxId, folder);
 
-	if (!isComposeModalOpen) return null;
+	if (!isComposeModalOpen || typeof document === "undefined") return null;
 
-	return (
+	return createPortal(
 		<div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
 			<div 
 				className="absolute inset-0 bg-black/30 transition-opacity" 
@@ -145,6 +146,7 @@ export default function ComposeEmail() {
 					</div>
 				</form>
 			</div>
-		</div>
+		</div>,
+		document.body
 	);
 }

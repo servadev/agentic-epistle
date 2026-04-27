@@ -4,6 +4,7 @@
 
 import { Button, Dialog } from "@cloudflare/kumo";
 import { downloadFile } from "~/lib/utils";
+import { createPortal } from "react-dom";
 import type { Email } from "~/types";
 
 interface PreviewImage {
@@ -75,7 +76,7 @@ export default function EmailPanelDialogs({
 
 	return (
 		<>
-			{sourceViewEmail !== null && (
+			{sourceViewEmail !== null && typeof document !== "undefined" && createPortal(
 				<div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
 					<div 
 						className="absolute inset-0 bg-black/30 transition-opacity" 
@@ -122,10 +123,11 @@ export default function EmailPanelDialogs({
 							</Button>
 						</div>
 					</div>
-				</div>
+				</div>,
+				document.body
 			)}
 
-			{previewImage !== null && (
+			{previewImage !== null && typeof document !== "undefined" && createPortal(
 				<div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
 					<div 
 						className="absolute inset-0 bg-black/30 transition-opacity" 
@@ -161,10 +163,11 @@ export default function EmailPanelDialogs({
 							</Button>
 						</div>
 					</div>
-				</div>
+				</div>,
+				document.body
 			)}
 
-			{isDeleteConfirmOpen && (
+			{isDeleteConfirmOpen && typeof document !== "undefined" && createPortal(
 				<div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
 					<div 
 						className="absolute inset-0 bg-black/30 transition-opacity" 
@@ -193,7 +196,8 @@ export default function EmailPanelDialogs({
 							</Button>
 						</div>
 					</div>
-				</div>
+				</div>,
+				document.body
 			)}
 		</>
 	);

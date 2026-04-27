@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useParams, Link } from "react-router";
 import { Button, Input, Tooltip, useKumoToastManager } from "@cloudflare/kumo";
 import {
@@ -697,7 +698,7 @@ export default function ContactsRoute() {
       </div>
 
       {/* Avatar Upload Modal */}
-      {isAvatarModalOpen && selectedContact && (
+      {isAvatarModalOpen && selectedContact && typeof document !== "undefined" && createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div 
             className="absolute inset-0 bg-black/30 transition-opacity" 
@@ -752,11 +753,12 @@ export default function ContactsRoute() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Delete Confirmation Modal */}
-      {isDeleteConfirmOpen && selectedContact && (
+      {isDeleteConfirmOpen && selectedContact && typeof document !== "undefined" && createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div 
             className="absolute inset-0 bg-black/30 transition-opacity" 
@@ -786,7 +788,8 @@ export default function ContactsRoute() {
               </Button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
