@@ -53,7 +53,7 @@ export default function EmailPanelHeader({
 
 				{/* Right side */}
 				<div className="flex items-center gap-3 shrink-0">
-					{email.tags && email.tags.length > 0 && (
+					{Array.isArray(email.tags) && email.tags.length > 0 && (
 						<div className="hidden sm:flex items-center gap-1.5">
 							{email.tags.map((tag) => (
 								<span
