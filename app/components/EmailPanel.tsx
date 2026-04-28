@@ -17,6 +17,7 @@ import api from "~/services/api";
 import { useDeleteEmail, useEmail, useMoveEmail, useReplyToEmail, useSendEmail, useThreadReplies, useUpdateEmail } from "~/queries/emails";
 import { useFolders } from "~/queries/folders";
 import { useMailbox } from "~/queries/mailboxes";
+import { useContacts } from "~/queries/contacts";
 import { useUIStore } from "~/hooks/useUIStore";
 import type { Email, Folder, Mailbox } from "~/types";
 
@@ -54,6 +55,13 @@ export default function EmailPanel({ emailId }: { emailId: string }) {
 
 	// Modals state
 	const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+
+	const { data: contactsData } = useContacts(mailboxId);
+	const contacts = contactsData?.contacts || [];
+	const senderMatch = email?.sender.match(/<([^>]+)>/);
+	const rawSenderEmail = senderMatch ? senderMatch[1] : email?.sender;
+	const senderContact = contacts.find(c => c.email.toLowerCase() === rawSenderEmail?.toLowerCase());
+	const avatarUrl = senderContact?.avatar_url;
 
 	const isDraftFolder = folder === Folders.DRAFT;
 
@@ -179,6 +187,12 @@ export default function EmailPanel({ emailId }: { emailId: string }) {
 
 	return (
 		<div className="flex flex-col h-full">
+			<EmailPanelHeader
+				email={email}
+				avatarUrl={avatarUrl || undefined}
+				onClose={closePanel}
+			/>
+
 			<EmailPanelToolbar
 				email={email}
 				mailboxId={mailboxId}
@@ -211,12 +225,6 @@ export default function EmailPanel({ emailId }: { emailId: string }) {
 				onMove={handleMove}
 				onViewSource={() => setSourceViewEmail(email)}
 				onDelete={handleDelete}
-			/>
-
-			<EmailPanelHeader
-				subject={email.subject}
-				messageCount={allMessages.length}
-				showThreadCount={hasThread}
 			/>
 
 			<div className="flex-1 overflow-y-auto">

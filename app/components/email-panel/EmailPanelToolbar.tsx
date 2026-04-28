@@ -60,7 +60,7 @@ export default function EmailPanelToolbar({
 	onDelete,
 }: EmailPanelToolbarProps) {
 	return (
-		<div className="flex items-center gap-1 px-3 py-2 border-b border-slate-200 shrink-0 md:px-4 bg-white">
+		<div className="flex items-center gap-1 px-3 py-2 border-b border-kumo-line shrink-0 md:px-4 bg-kumo-background">
 			<Button
 				variant="ghost"
 				shape="square"
@@ -177,17 +177,6 @@ export default function EmailPanelToolbar({
 						icon={<TrashIcon size={18} />}
 						onClick={onDelete}
 						aria-label="Delete"
-					/>
-				</Tooltip>
-				<Tooltip content="Close" side="bottom" asChild>
-					<Button
-						variant="ghost"
-						shape="square"
-						size="sm"
-						icon={<XIcon size={18} />}
-						onClick={onBack}
-						aria-label="Close"
-						className="hidden md:inline-flex"
 					/>
 				</Tooltip>
 			</div>
