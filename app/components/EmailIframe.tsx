@@ -9,6 +9,8 @@ interface EmailIframeProps {
 	body: string;
 	/** When true, iframe auto-sizes to content height instead of filling parent */
 	autoSize?: boolean;
+	/** When true, the background is transparent instead of white */
+	transparentBg?: boolean;
 }
 
 /**
@@ -27,7 +29,7 @@ interface EmailIframeProps {
  * - A strict CSP meta tag blocks external resource loads inside the
  *   iframe as a defense-in-depth layer.
  */
-export default function EmailIframe({ body, autoSize }: EmailIframeProps) {
+export default function EmailIframe({ body, autoSize, transparentBg }: EmailIframeProps) {
 	const iframeRef = useRef<HTMLIFrameElement>(null);
 	const [height, setHeight] = useState(autoSize ? 100 : 0);
 
@@ -95,7 +97,7 @@ export default function EmailIframe({ body, autoSize }: EmailIframeProps) {
 <style>
 * { box-sizing: border-box; }
 html {
-	background: #ffffff;
+	background: ${transparentBg ? "transparent" : "#ffffff"};
 	color-scheme: light;
 }
 body {
@@ -103,7 +105,7 @@ body {
 	font-size: 14px;
 	line-height: 1.6;
 	color: #1a1a1a;
-	background: #ffffff;
+	background: ${transparentBg ? "transparent" : "#ffffff"};
 	padding: ${padding};
 	margin: 0;
 	word-wrap: break-word;
@@ -137,7 +139,7 @@ ul, ol { padding-left: 20px; margin: 4px 0; }
 </head>
 <body>${cleanBody}${heightScript}</body>
 </html>`;
-	}, [body, autoSize]);
+	}, [body, autoSize, transparentBg]);
 
 	return (
 		<iframe

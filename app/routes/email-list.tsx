@@ -604,7 +604,7 @@ export default function EmailListRoute() {
 													
 													<div className="flex items-center gap-1.5 mt-0.5">
 														<span
-															className={`truncate text-[18px] ${hasUnread(email) ? "font-bold text-slate-900" : "font-semibold text-slate-800"}`}
+															className={`truncate text-[17px] ${hasUnread(email) ? "font-bold text-slate-900" : "font-semibold text-slate-800"}`}
 														>
 															{email.subject}
 														</span>

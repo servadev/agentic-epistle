@@ -40,10 +40,12 @@ export default function MailboxSplitView({
 					{isComposing && !selectedEmailId ? (
 						<ComposePanel />
 					) : isComposing && selectedEmailId ? (
-						<div className="flex flex-col h-full overflow-y-auto">
-							<ComposePanel />
-							<div className="border-t border-slate-200">
+						<div className="flex flex-col h-full overflow-hidden">
+							<div className="flex-1 min-h-0 border-b border-slate-200">
 								<EmailPanel emailId={selectedEmailId} />
+							</div>
+							<div className="h-[50vh] min-h-[300px] max-h-[600px] shrink-0 bg-slate-50">
+								<ComposePanel />
 							</div>
 						</div>
 					) : selectedEmailId ? (

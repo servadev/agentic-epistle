@@ -180,6 +180,7 @@ export default function ThreadMessage({
 							email.attachments,
 						)}
 						autoSize
+						transparentBg={isDraft}
 					/>
 				</div>
 
