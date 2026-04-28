@@ -466,8 +466,7 @@ export default function EmailListRoute() {
 					return trimmed.split("@")[0];
 				})
 				.filter((name, idx, arr) => arr.indexOf(name) === idx);
-			if (names.length <= 3) return names.join(", ");
-			return `${names.slice(0, 2).join(", ")} +${names.length - 2}`;
+			if (names.length > 0) return names[0];
 		}
 		
 		// Fallback for sender if participants is empty
@@ -504,29 +503,19 @@ export default function EmailListRoute() {
 			selectedEmailId={selectedEmailId}
 			isComposing={isComposing}
 		>
-				{/* Folder header */}
-				<div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-200 shrink-0 md:px-5 bg-white">
-					<h1 className="text-lg font-bold text-slate-900 tracking-tight">
-						{folderName}
-					</h1>
-					<div className="flex items-center gap-2">
-						{totalCount > 0 && (
-							<span className="text-sm text-slate-500 mr-2 hidden sm:inline">
-								{totalCount} conversation{totalCount !== 1 ? "s" : ""}
-							</span>
-						)}
-						{folder === Folders.TRASH && totalCount > 0 && (
-							<Button
-								variant="destructive"
-								size="sm"
-								onClick={handleEmptyTrash}
-								loading={emptyTrash.isPending}
-							>
-								Empty
-							</Button>
-						)}
+				{/* Empty Trash Header (Only show for Trash) */}
+				{folder === Folders.TRASH && totalCount > 0 && (
+					<div className="flex items-center justify-end px-4 py-2 border-b border-slate-200 shrink-0 md:px-5 bg-white">
+						<Button
+							variant="destructive"
+							size="sm"
+							onClick={handleEmptyTrash}
+							loading={emptyTrash.isPending}
+						>
+							Empty Trash
+						</Button>
 					</div>
-				</div>
+				)}
 
 				{/* Email rows */}
 				<div className="flex-1 overflow-y-auto">
@@ -536,7 +525,7 @@ export default function EmailListRoute() {
 						<div>
 							{groupedEmails.map((group) => (
 								<div key={group.header}>
-									<div className="sticky top-0 z-10 bg-white/95 backdrop-blur px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+									<div className="sticky top-0 z-10 bg-white/95 backdrop-blur px-4 py-2.5 text-[13px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
 										{group.header}
 									</div>
 									{group.emails.map((email) => {
@@ -554,11 +543,11 @@ export default function EmailListRoute() {
 														handleRowClick(email);
 													}
 												}}
-												className={`group relative flex items-start gap-3 w-full text-left cursor-pointer transition-colors border-b border-slate-200 py-3 md:py-4 ${
+												className={`group relative flex items-start gap-3 w-full text-left cursor-pointer transition-all duration-200 border-b border-slate-200 py-3 md:py-4 ${
 													isSelected 
 														? `bg-indigo-50 border-l-4 border-l-indigo-600 pl-3 pr-4 md:pl-4 md:pr-6 ${isPanelOpen ? "md:pr-4 md:pl-3" : ""}`
 														: `bg-white hover:bg-slate-50 px-4 md:px-5 ${isPanelOpen ? "md:px-4" : ""}`
-												}`}
+												} ${!hasUnread(email) ? "opacity-[0.65] hover:opacity-80" : ""}`}
 											>
 												{/* Unread dot - Absolute positioned to save space */}
 												{hasUnread(email) && (
@@ -613,9 +602,9 @@ export default function EmailListRoute() {
 														</div>
 													</div>
 													
-													<div className="flex items-center gap-1.5">
+													<div className="flex items-center gap-1.5 mt-0.5">
 														<span
-															className={`truncate text-base ${hasUnread(email) ? "font-bold text-slate-900" : "font-semibold text-slate-800"}`}
+															className={`truncate text-[18px] ${hasUnread(email) ? "font-bold text-slate-900" : "font-semibold text-slate-800"}`}
 														>
 															{email.subject}
 														</span>
