@@ -83,36 +83,36 @@ export default function EmailPanelHeader({
 						</div>
 					)}
 					<div className="min-w-0 flex flex-col justify-center">
-						<div className="text-[22px] font-semibold text-kumo-default truncate leading-tight">
-							{displayName}
-						</div>
-						<div className="text-[12px] text-kumo-subtle truncate mt-0.5 flex items-center gap-1.5">
-							<span className="font-medium text-slate-700">{email.subject || "No Subject"}</span>
+						<div className="text-[12px] text-kumo-subtle truncate flex items-center gap-1.5 mb-0.5">
+							<span className="font-medium text-slate-700">{displayName}</span>
 							<span className="text-slate-400">&lt;{rawSenderEmail}&gt;</span>
+						</div>
+						<div className="text-[22px] font-semibold text-kumo-default truncate leading-tight">
+							{email.subject || "No Subject"}
 						</div>
 					</div>
 				</div>
 
 					{/* Right side */}
-					<div className="flex items-center gap-3 shrink-0">
-						{tagsArray.length > 0 && (
-						<div className="hidden sm:flex items-center gap-1.5">
-							{tagsArray.map((tag: any) => (
-								<span
-									key={tag.id}
-									className="inline-flex items-center gap-1.5 rounded-md bg-kumo-background px-2 py-0.5 text-[10px] font-bold text-kumo-default ring-1 ring-inset ring-kumo-line shadow-sm uppercase tracking-wider"
-								>
-									<span
-										className={`h-1.5 w-1.5 rounded-full ${tag.color}`}
-									/>
-									{tag.name}
-								</span>
-							))}
-						</div>
-					)}
-						<span className="text-[13px] text-kumo-subtle">
+					<div className="flex flex-col items-end gap-1.5 shrink-0">
+						<span className="text-[13px] text-kumo-subtle whitespace-nowrap">
 							{formatDetailDate(email.date)}
 						</span>
+						{tagsArray.length > 0 && (
+							<div className="hidden sm:flex items-center gap-1.5">
+								{tagsArray.map((tag: any) => (
+									<span
+										key={tag.id}
+										className="inline-flex items-center gap-1.5 rounded-md bg-kumo-background px-2 py-0.5 text-[10px] font-bold text-kumo-default ring-1 ring-inset ring-kumo-line shadow-sm uppercase tracking-wider"
+									>
+										<span
+											className={`h-1.5 w-1.5 rounded-full ${tag.color}`}
+										/>
+										{tag.name}
+									</span>
+								))}
+							</div>
+						)}
 					</div>
 				</div>
 			</div>

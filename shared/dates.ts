@@ -53,11 +53,27 @@ export function formatListDate(dateStr: string): string {
 
 /**
  * Email detail header.
- * "Tue, Apr 15, 3:42 PM"
+ * "Today, 10:30 AM" or "Yesterday, 3:42 PM" or "Tue, Apr 15, 3:42 PM"
  */
 export function formatDetailDate(dateStr: string): string {
 	const date = safeParse(dateStr);
 	if (!date) return dateStr;
+
+	const now = new Date();
+	const timeStr = date.toLocaleTimeString("en-US", {
+		hour: "numeric",
+		minute: "2-digit",
+	}).toLowerCase().replace(' ', '');
+
+	if (date.toDateString() === now.toDateString()) {
+		return `Today, ${timeStr}`;
+	}
+	
+	const yesterday = new Date(now);
+	yesterday.setDate(now.getDate() - 1);
+	if (date.toDateString() === yesterday.toDateString()) {
+		return `Yesterday, ${timeStr}`;
+	}
 
 	return date.toLocaleDateString(undefined, {
 		weekday: "short",
@@ -72,14 +88,38 @@ export function formatDetailDate(dateStr: string): string {
  * Thread message headers — time only.
  * "3:42 PM"
  */
+/**
+ * Group headers for message bubbles.
+ * "Today", "Yesterday", "Apr 15", "Apr 15, 2024"
+ */
+export function formatMessageGroupDate(dateStr: string): string {
+	const date = safeParse(dateStr);
+	if (!date) return dateStr;
+
+	const now = new Date();
+	const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+	const yesterday = new Date(today);
+	yesterday.setDate(yesterday.getDate() - 1);
+
+	const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+	if (d.getTime() === today.getTime()) return "Today";
+	if (d.getTime() === yesterday.getTime()) return "Yesterday";
+
+	if (d.getFullYear() === today.getFullYear()) {
+		return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+	}
+	return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
 export function formatShortDate(dateStr: string): string {
 	const date = safeParse(dateStr);
 	if (!date) return dateStr;
 
-	return date.toLocaleTimeString(undefined, {
+	return date.toLocaleTimeString("en-US", {
 		hour: "numeric",
 		minute: "2-digit",
-	});
+	}).toLowerCase().replace(' ', '');
 }
 
 /**

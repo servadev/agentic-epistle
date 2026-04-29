@@ -2,11 +2,8 @@
 // Licensed under the Apache 2.0 license found in the LICENSE file or at:
 //     https://opensource.org/licenses/Apache-2.0
 
-import { Badge, Button, Tooltip } from "@cloudflare/kumo";
+import { Button } from "@cloudflare/kumo";
 import {
-	CaretDownIcon,
-	CaretUpIcon,
-	CodeIcon,
 	PaperPlaneTiltIcon,
 	PencilSimpleIcon,
 	TrashIcon,
@@ -14,13 +11,9 @@ import {
 import EmailAttachmentList from "~/components/EmailAttachmentList";
 import EmailIframe from "~/components/EmailIframe";
 import {
-	formatDetailDate,
 	formatShortDate,
 	rewriteInlineImages,
-	stripHtml,
 } from "~/lib/utils";
-import { useContacts } from "~/queries/contacts";
-import { useKumoToastManager } from "@cloudflare/kumo";
 import type { Email } from "~/types";
 
 interface ThreadMessageProps {
@@ -39,27 +32,6 @@ interface ThreadMessageProps {
 	onPreviewImage?: (url: string, filename: string) => void;
 }
 
-function Avatar({ isDraft, isSelf, sender, avatarUrl }: { isDraft?: boolean; isSelf: boolean; sender: string; avatarUrl?: string }) {
-	if (avatarUrl) {
-		return (
-			<img src={avatarUrl} alt="" className="flex h-8 w-8 shrink-0 rounded-lg object-cover bg-slate-100 shadow-sm" />
-		);
-	}
-	return (
-		<div
-			className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold shadow-sm ${
-				isDraft
-					? "bg-slate-100 text-slate-500"
-					: isSelf
-						? "bg-indigo-600 text-white"
-						: "bg-slate-100 text-slate-900"
-			}`}
-		>
-			{isDraft ? "D" : sender.charAt(0).toUpperCase()}
-		</div>
-	);
-}
-
 export default function ThreadMessage({
 	email,
 	mailboxId,
@@ -75,109 +47,84 @@ export default function ThreadMessage({
 	onViewSource,
 	onPreviewImage,
 }: ThreadMessageProps) {
-	const { data: contactsData } = useContacts(mailboxId);
-	const contacts = contactsData?.contacts || [];
-	
-	const senderMatch = email.sender.match(/<([^>]+)>/);
-	const rawSenderEmail = senderMatch ? senderMatch[1] : email.sender;
-	const senderContact = contacts.find(c => c.email.toLowerCase() === rawSenderEmail.toLowerCase());
-	const avatarUrl = senderContact?.avatar_url;
-
 	const isSelf = email.sender === mailboxEmail;
-	const containerClassName = `${!isLast ? "border-b border-slate-200" : ""} ${isDraft ? "border-l-2 border-l-amber-500 bg-amber-50/50" : ""}`;
-	const senderLabel = isDraft ? "Draft reply" : isSelf ? "You" : email.sender;
-
-	if (!isExpanded) {
-		return (
-			<div className={containerClassName}>
-				<button
-					type="button"
-					onClick={onToggleExpand}
-					className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 rounded-lg text-left"
-				>
-					<Avatar isDraft={isDraft} isSelf={isSelf} sender={email.sender} avatarUrl={avatarUrl || undefined} />
-					<div className="flex-1 min-w-0">
-						<div className="flex items-center justify-between">
-							<span className="text-sm font-medium text-slate-900 truncate">
-								{senderLabel}
-							</span>
-							<span className="text-xs text-slate-500 shrink-0">
-								{formatDetailDate(email.date)}
-							</span>
-						</div>
-						<p className="text-xs text-slate-500 truncate">
-							{stripHtml(email.body || "").slice(0, 80)}
-						</p>
-					</div>
-					<CaretDownIcon size={14} className="text-slate-500 shrink-0" />
-				</button>
-			</div>
-		);
-	}
+	
+	// Chat bubble styling
+	const bubbleAlignment = isSelf ? "justify-end" : "justify-start";
+	const bubbleBg = isDraft ? "bg-amber-50 border-amber-200" : isSelf ? "bg-indigo-50 border-indigo-100" : "bg-white border-slate-200";
+	const bubbleRadius = isSelf ? "rounded-2xl rounded-tr-sm" : "rounded-2xl rounded-tl-sm";
 
 	return (
-		<div className={`group/thread-msg ${containerClassName}`}>
-			<div className="px-4 py-4 md:px-6">
-				{/* Remove the whole avatar/to/date header area since it is redundant with EmailPanelHeader */}
-				<div className="md:ml-[42px] -mt-2">
-					<EmailIframe
-						body={rewriteInlineImages(
-							email.body || "",
-							mailboxId || "",
-							email.id,
-							email.attachments,
-						)}
-						autoSize
-						transparentBg={isDraft}
-					/>
-				</div>
-
-				{isDraft && (onSendDraft || onEditDraft || onDeleteDraft) && (
-					<div className="flex gap-2 mt-3 md:ml-[42px]">
-						{onSendDraft && (
-							<Button
-								variant="primary"
-								size="sm"
-								icon={<PaperPlaneTiltIcon size={14} />}
-								onClick={onSendDraft}
-								loading={isSending}
-								disabled={isSending}
-							>
-								{isSending ? "Sending..." : "Send"}
-							</Button>
-						)}
-						{onEditDraft && (
-							<Button
-								variant="secondary"
-								size="sm"
-								icon={<PencilSimpleIcon size={14} />}
-								onClick={onEditDraft}
-								disabled={isSending}
-							>
-								Edit
-							</Button>
-						)}
-						{onDeleteDraft && (
-							<Button
-								variant="ghost"
-								size="sm"
-								icon={<TrashIcon size={14} />}
-								onClick={onDeleteDraft}
-								disabled={isSending}
-							>
-								Discard
-							</Button>
-						)}
+		<div className={`flex w-full ${bubbleAlignment} mb-4 group/thread-msg`}>
+			<div className={`max-w-[90%] md:max-w-[85%] flex flex-col`}>
+				<div className={`relative px-4 py-3 md:px-5 md:py-4 border shadow-sm ${bubbleBg} ${bubbleRadius}`}>
+					<div className="-mx-2 -mt-2">
+						<EmailIframe
+							body={rewriteInlineImages(
+								email.body || "",
+								mailboxId || "",
+								email.id,
+								email.attachments,
+							)}
+							autoSize
+							transparentBg={true}
+						/>
 					</div>
-				)}
 
-				<EmailAttachmentList
-					mailboxId={mailboxId}
-					emailId={email.id}
-					attachments={email.attachments}
-					onPreviewImage={onPreviewImage}
-					className="mt-3 md:ml-[42px]"
-				/>
+					{isDraft && (onSendDraft || onEditDraft || onDeleteDraft) && (
+						<div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-amber-200/50">
+							{onSendDraft && (
+								<Button
+									variant="primary"
+									size="sm"
+									icon={<PaperPlaneTiltIcon size={14} />}
+									onClick={onSendDraft}
+									loading={isSending}
+									disabled={isSending}
+								>
+									{isSending ? "Sending..." : "Send"}
+								</Button>
+							)}
+							{onEditDraft && (
+								<Button
+									variant="secondary"
+									size="sm"
+									icon={<PencilSimpleIcon size={14} />}
+									onClick={onEditDraft}
+									disabled={isSending}
+								>
+									Edit
+								</Button>
+							)}
+							{onDeleteDraft && (
+								<Button
+									variant="ghost"
+									size="sm"
+									icon={<TrashIcon size={14} />}
+									onClick={onDeleteDraft}
+									disabled={isSending}
+								>
+									Discard
+								</Button>
+							)}
+						</div>
+					)}
+
+					{email.attachments && email.attachments.length > 0 && (
+						<div className="mt-3 pt-3 border-t border-slate-100">
+							<EmailAttachmentList
+								mailboxId={mailboxId}
+								emailId={email.id}
+								attachments={email.attachments}
+								onPreviewImage={onPreviewImage}
+							/>
+						</div>
+					)}
+				</div>
+				
+				<div className={`flex items-center gap-2 mt-1.5 text-[11px] text-slate-400 font-medium ${isSelf ? 'justify-end pr-1' : 'justify-start pl-1'}`}>
+					{formatShortDate(email.date)}
+				</div>
 			</div>
 		</div>
 	);

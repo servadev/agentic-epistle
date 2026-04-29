@@ -6,10 +6,10 @@ import { useKumoToastManager } from "@cloudflare/kumo";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router";
 import { Folders } from "shared/folders";
+import { formatMessageGroupDate } from "shared/dates";
 import EmailPanelDialogs from "~/components/email-panel/EmailPanelDialogs";
 import EmailPanelHeader from "~/components/email-panel/EmailPanelHeader";
 import EmailPanelToolbar from "~/components/email-panel/EmailPanelToolbar";
-import SingleMessageView from "~/components/email-panel/SingleMessageView";
 import ThreadMessage from "~/components/email-panel/ThreadMessage";
 import SuggestedEventThreadItem from "~/components/email-panel/SuggestedEventThreadItem";
 import TagModal from "~/components/TagModal";
@@ -51,7 +51,6 @@ export default function EmailPanel({ emailId }: { emailId: string }) {
 	const toastManager = useKumoToastManager();
 	const [isSending, setIsSending] = useState(false);
 	const [sourceViewEmail, setSourceViewEmail] = useState<Email | null>(null);
-	const [collapsedMessages, setCollapsedMessages] = useState<Set<string>>(new Set());
 	const [previewImage, setPreviewImage] = useState<{ url: string; filename: string } | null>(null);
 
 	// Modals state
@@ -77,13 +76,26 @@ export default function EmailPanel({ emailId }: { emailId: string }) {
 		return [email, ...threadReplies].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 	}, [email, threadReplies]);
 
+	const groupedMessages = useMemo(() => {
+		const groups: { header: string; messages: Email[] }[] = [];
+		let currentHeader = "";
+
+		allMessages.forEach((msg) => {
+			const header = formatMessageGroupDate(msg.date);
+			if (header !== currentHeader) {
+				groups.push({ header, messages: [msg] });
+				currentHeader = header;
+			} else {
+				groups[groups.length - 1].messages.push(msg);
+			}
+		});
+		return groups;
+	}, [allMessages]);
+
 	// Reset collapsed state when the selected email changes
 	const currentEmailId = email?.id;
-	useEffect(() => {
-		setCollapsedMessages(new Set());
-	}, [currentEmailId]);
 
-	const toggleExpand = (msgId: string) => { setCollapsedMessages((prev) => { const next = new Set(prev); if (next.has(msgId)) next.delete(msgId); else next.add(msgId); return next; }); };
+	const toggleExpand = (msgId: string) => {};
 
 	const draftMessageIds = useMemo(() => {
 		const ids = new Set<string>();
@@ -232,10 +244,15 @@ export default function EmailPanel({ emailId }: { emailId: string }) {
 				}
 			/>
 
-			<div className="flex-1 overflow-y-auto">
-				{hasThread ? (
-					<>
-						{allMessages.map((msg, idx) => {
+			<div className="flex-1 overflow-y-auto px-4 py-6 md:px-6 md:py-8 bg-slate-50/50">
+				{groupedMessages.map((group) => (
+					<div key={group.header} className="mb-6">
+						<div className="flex justify-center mb-6">
+							<span className="bg-slate-200/60 text-slate-500 text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+								{group.header}
+							</span>
+						</div>
+						{group.messages.map((msg, idx) => {
 							const isDraft = draftMessageIds.has(msg.id);
 							return (
 								<ThreadMessage
@@ -243,10 +260,10 @@ export default function EmailPanel({ emailId }: { emailId: string }) {
 									email={msg}
 									mailboxId={mailboxId}
 									mailboxEmail={currentMailbox?.email}
-									isLast={idx === allMessages.length - 1}
+									isLast={idx === group.messages.length - 1 && group.header === groupedMessages[groupedMessages.length - 1].header}
 									isDraft={isDraft}
 									isSending={isDraft ? isSending : false}
-									isExpanded={!collapsedMessages.has(msg.id)}
+									isExpanded={true}
 									onToggleExpand={() => toggleExpand(msg.id)}
 									onSendDraft={isDraft ? () => handleSendDraft(msg) : undefined}
 									onEditDraft={isDraft ? () => handleEditDraft(msg) : undefined}
@@ -258,29 +275,13 @@ export default function EmailPanel({ emailId }: { emailId: string }) {
 								/>
 							);
 						})}
-						{threadSuggestedEventsEmailId && (
-							<SuggestedEventThreadItem
-								mailboxId={mailboxId}
-								queryEmailId={threadSuggestedEventsEmailId}
-							/>
-						)}
-					</>
-				) : (
-					<>
-						<SingleMessageView
-							email={email}
-							mailboxId={mailboxId}
-							onPreviewImage={(url, filename) =>
-								setPreviewImage({ url, filename })
-							}
-						/>
-						{threadSuggestedEventsEmailId && (
-							<SuggestedEventThreadItem
-								mailboxId={mailboxId}
-								queryEmailId={threadSuggestedEventsEmailId}
-							/>
-						)}
-					</>
+					</div>
+				))}
+				{threadSuggestedEventsEmailId && (
+					<SuggestedEventThreadItem
+						mailboxId={mailboxId}
+						queryEmailId={threadSuggestedEventsEmailId}
+					/>
 				)}
 			</div>
 
