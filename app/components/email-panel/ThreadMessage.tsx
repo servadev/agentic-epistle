@@ -118,60 +118,8 @@ export default function ThreadMessage({
 	return (
 		<div className={`group/thread-msg ${containerClassName}`}>
 			<div className="px-4 py-4 md:px-6">
-				<div className="flex items-center justify-between gap-3 mb-3">
-					<div className="flex items-center gap-2.5 min-w-0">
-						<button
-							type="button"
-							onClick={onToggleExpand}
-							className="shrink-0"
-							aria-label="Collapse message"
-						>
-							<div className="cursor-pointer hover:ring-2 hover:ring-indigo-600/30 transition-shadow rounded-lg">
-								<Avatar isDraft={isDraft} isSelf={isSelf} sender={email.sender} avatarUrl={avatarUrl || undefined} />
-							</div>
-						</button>
-						<div className="min-w-0">
-							<div className="flex items-center gap-2">
-								<span className="text-sm font-medium text-slate-900 truncate">
-									{senderLabel}
-								</span>
-								{isDraft && <Badge variant="outline">Draft</Badge>}
-							</div>
-							<div className="text-xs text-slate-500">To: {email.recipient}</div>
-						</div>
-					</div>
-					<div className="flex items-center gap-1 shrink-0">
-						<span className="text-xs text-slate-500">
-							{formatShortDate(email.date)}
-						</span>
-						{onViewSource && (
-							<Tooltip content="View source" side="bottom" asChild>
-								<Button
-									variant="ghost"
-									shape="square"
-									size="sm"
-									icon={<CodeIcon size={14} />}
-									onClick={onViewSource}
-									aria-label="View source"
-									className="transition-opacity !h-6 !w-6"
-								/>
-							</Tooltip>
-						)}
-						<button
-							type="button"
-							onClick={onToggleExpand}
-							className="ml-1"
-							aria-label="Collapse message"
-						>
-							<CaretUpIcon
-								size={14}
-								className="text-slate-500 hover:text-slate-900 transition-colors"
-							/>
-						</button>
-					</div>
-				</div>
-
-				<div className="md:ml-[42px]">
+				{/* Remove the whole avatar/to/date header area since it is redundant with EmailPanelHeader */}
+				<div className="md:ml-[42px] -mt-2">
 					<EmailIframe
 						body={rewriteInlineImages(
 							email.body || "",

@@ -84,10 +84,10 @@ export default function EmailPanelHeader({
 					)}
 					<div className="min-w-0 flex flex-col justify-center">
 						<div className="text-[22px] font-semibold text-kumo-default truncate leading-tight">
-							{email.subject || "No Subject"}
+							{displayName}
 						</div>
 						<div className="text-[12px] text-kumo-subtle truncate mt-0.5 flex items-center gap-1.5">
-							<span className="font-medium text-slate-700">{displayName}</span>
+							<span className="font-medium text-slate-700">{email.subject || "No Subject"}</span>
 							<span className="text-slate-400">&lt;{rawSenderEmail}&gt;</span>
 						</div>
 					</div>
