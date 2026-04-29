@@ -474,7 +474,13 @@ async function receiveEmail(event: { raw: ReadableStream; rawSize: number }, env
 	const emailReferences = parsedEmail.references ? parsedEmail.references.split(/\s+/).filter(Boolean).map(extractMsgId) : [];
 	let threadId = emailReferences[0] || inReplyTo || messageId;
 
-	if (!inReplyTo && emailReferences.length === 0) {
+	const refsToSearch = [...emailReferences, inReplyTo].filter(Boolean);
+	if (refsToSearch.length > 0) {
+		const existingThread = await (stub as any).findThreadByMessageIds(refsToSearch);
+		if (existingThread) {
+			threadId = existingThread;
+		}
+	} else {
 		const subjectThread = await (stub as any).findThreadBySubject(parsedEmail.subject || "", parsedEmail.from?.address || undefined);
 		if (subjectThread) threadId = subjectThread;
 	}

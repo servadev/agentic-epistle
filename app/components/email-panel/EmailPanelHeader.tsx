@@ -41,29 +41,7 @@ export default function EmailPanelHeader({
 	return (
 		<div className="flex flex-col border-b border-kumo-line shrink-0 bg-kumo-background">
 			{toolbar && (
-				<div className="border-b border-kumo-line/30 flex justify-between items-center pl-3">
-					<div className="flex items-center">
-						<Tooltip content="Close" side="bottom" asChild>
-							<Button
-								variant="ghost"
-								shape="square"
-								size="sm"
-								icon={<XIcon size={18} />}
-								onClick={onClose}
-								aria-label="Close"
-								className="hidden md:flex"
-							/>
-						</Tooltip>
-						<Button
-							variant="ghost"
-							shape="square"
-							size="sm"
-							icon={<ArrowLeftIcon size={18} />}
-							onClick={onClose}
-							aria-label="Back to list"
-							className="md:hidden flex shrink-0"
-						/>
-					</div>
+				<div className="border-b border-kumo-line/30 flex justify-between items-center">
 					{toolbar}
 				</div>
 			)}
