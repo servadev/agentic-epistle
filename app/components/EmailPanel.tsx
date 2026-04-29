@@ -35,7 +35,7 @@ function EmailPanelSkeleton() {
 export default function EmailPanel({ emailId }: { emailId: string }) {
 	const { mailboxId, folder } = useParams<{ mailboxId: string; folder: string }>();
 	const { data: email } = useEmail(mailboxId, emailId) as { data?: Email };
-	const { data: threadRepliesRaw } = useThreadReplies(mailboxId, email?.thread_id) as {
+	const { data: threadRepliesRaw } = useThreadReplies(mailboxId, email?.thread_id || email?.id) as {
 		data?: Email[];
 	};
 	const updateEmail = useUpdateEmail();
@@ -124,9 +124,9 @@ export default function EmailPanel({ emailId }: { emailId: string }) {
 	const lastReceivedMessage = useMemo(() => {
 		const ce = currentMailbox?.email;
 		const received = allMessages.filter((msg) => !draftMessageIds.has(msg.id) && msg.sender !== ce);
-		if (received.length > 0) return received[0];
+		if (received.length > 0) return received[received.length - 1];
 		const nonDrafts = allMessages.filter((msg) => !draftMessageIds.has(msg.id));
-		return nonDrafts.length > 0 ? nonDrafts[0] : email;
+		return nonDrafts.length > 0 ? nonDrafts[nonDrafts.length - 1] : email;
 	}, [allMessages, draftMessageIds, currentMailbox?.email, email]);
 
 	const moveToFolders = useMemo(() => { const cur = folder || email?.folder_id; return folders.filter((f) => f.id !== cur); }, [folders, folder, email?.folder_id]);

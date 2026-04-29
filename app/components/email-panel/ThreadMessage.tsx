@@ -56,7 +56,7 @@ export default function ThreadMessage({
 
 	return (
 		<div className={`flex w-full ${bubbleAlignment} mb-4 group/thread-msg`}>
-			<div className={`max-w-[90%] md:max-w-[85%] flex flex-col`}>
+			<div className={`w-full max-w-[95%] md:max-w-[90%] lg:max-w-[85%] flex flex-col`}>
 				<div className={`relative px-4 py-3 md:px-5 md:py-4 border shadow-sm ${bubbleBg} ${bubbleRadius}`}>
 					<div className="-mx-2 -mt-2">
 						<EmailIframe
