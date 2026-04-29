@@ -26,7 +26,7 @@ import { TextStyle } from "@tiptap/extension-text-style";
 import Underline from "@tiptap/extension-underline";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface RichTextEditorProps {
 	value: string;
@@ -62,6 +62,25 @@ export default function RichTextEditor({
 		},
 	});
 
+	const [showFormatting, setShowFormatting] = useState(false);
+	const popoverRef = useRef<HTMLDivElement>(null);
+
+	useEffect(() => {
+		if (!showFormatting) return;
+		const handleClickOutside = (e: MouseEvent) => {
+			if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+				setShowFormatting(false);
+			}
+		};
+		document.addEventListener("mousedown", handleClickOutside);
+		return () => document.removeEventListener("mousedown", handleClickOutside);
+	}, [showFormatting]);
+
+	const handleFormat = useCallback((action: () => void) => {
+		action();
+		setShowFormatting(false);
+	}, []);
+
 	useEffect(() => {
 		if (editor && !editor.isDestroyed && value !== editor.getHTML()) {
 			editor.commands.setContent(value);
@@ -79,12 +98,17 @@ export default function RichTextEditor({
 		if (!editor) return;
 		const previousUrl = editor.getAttributes("link").href;
 		const url = window.prompt("URL", previousUrl);
-		if (url === null) return;
+		if (url === null) {
+			setShowFormatting(false);
+			return;
+		}
 		if (url === "") {
 			editor.chain().focus().extendMarkRange("link").unsetLink().run();
+			setShowFormatting(false);
 			return;
 		}
 		editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+		setShowFormatting(false);
 	}, [editor]);
 
 	if (!editor) return null;
@@ -98,167 +122,183 @@ export default function RichTextEditor({
 
 			{/* Toolbar at bottom */}
 			<div className="flex flex-wrap items-center justify-between gap-2 bg-slate-50 px-2 py-1.5 border-t border-slate-200 shrink-0">
-				<div className="flex items-center gap-0.5 flex-wrap">
-					{/* Text formatting */}
-					<Tooltip content="Heading 1" side="top" asChild>
+				<div className="flex items-center gap-0.5 flex-wrap relative" ref={popoverRef}>
+					<Tooltip content="Formatting options" side="top" asChild>
 						<Button
-							variant={editor.isActive("heading", { level: 1 }) ? "secondary" : "ghost"}
+							variant={showFormatting ? "secondary" : "ghost"}
 							shape="square"
 							size="sm"
-							onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-							aria-label="Heading 1"
+							onClick={() => setShowFormatting(!showFormatting)}
+							aria-label="Formatting options"
 						>
-							<span className="font-bold font-serif">H1</span>
+							<span className="font-bold font-serif tracking-tight text-[15px] leading-none">Aa</span>
 						</Button>
 					</Tooltip>
-					<Tooltip content="Heading 2" side="top" asChild>
-						<Button
-							variant={editor.isActive("heading", { level: 2 }) ? "secondary" : "ghost"}
-							shape="square"
-							size="sm"
-							onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-							aria-label="Heading 2"
-						>
-							<span className="font-bold font-serif text-sm">H2</span>
-						</Button>
-					</Tooltip>
-					<div className="mx-1 h-5 w-px bg-slate-300" />
-					<Tooltip content="Bold" side="top" asChild>
-						<Button
-							variant={editor.isActive("bold") ? "secondary" : "ghost"}
-							shape="square"
-							size="sm"
-							icon={<TextBIcon size={16} />}
-							onClick={() => editor.chain().focus().toggleBold().run()}
-							aria-label="Bold"
-						/>
-					</Tooltip>
-					<Tooltip content="Italic" side="top" asChild>
-						<Button
-							variant={editor.isActive("italic") ? "secondary" : "ghost"}
-							shape="square"
-							size="sm"
-							icon={<TextItalicIcon size={16} />}
-							onClick={() => editor.chain().focus().toggleItalic().run()}
-							aria-label="Italic"
-						/>
-					</Tooltip>
-					<Tooltip content="Underline" side="top" asChild>
-						<Button
-							variant={editor.isActive("underline") ? "secondary" : "ghost"}
-							shape="square"
-							size="sm"
-							icon={<TextUnderlineIcon size={16} />}
-							onClick={() => editor.chain().focus().toggleUnderline().run()}
-							aria-label="Underline"
-						/>
-					</Tooltip>
-					<Tooltip content="Strikethrough" side="top" asChild>
-						<Button
-							variant={editor.isActive("strike") ? "secondary" : "ghost"}
-							shape="square"
-							size="sm"
-							icon={<TextStrikethroughIcon size={16} />}
-							onClick={() => editor.chain().focus().toggleStrike().run()}
-							aria-label="Strikethrough"
-						/>
-					</Tooltip>
 
-					<div className="mx-1 h-5 w-px bg-slate-300" />
+					{showFormatting && (
+						<div className="absolute bottom-full left-0 mb-2 z-50 bg-white border border-slate-200 rounded-lg shadow-xl p-1.5 flex flex-wrap items-center gap-0.5 w-[280px] animate-in fade-in zoom-in-95 duration-100">
+							{/* Text formatting */}
+							<Tooltip content="Heading 1" side="top" asChild>
+								<Button
+									variant={editor.isActive("heading", { level: 1 }) ? "secondary" : "ghost"}
+									shape="square"
+									size="sm"
+									onClick={() => handleFormat(() => editor.chain().focus().toggleHeading({ level: 1 }).run())}
+									aria-label="Heading 1"
+								>
+									<span className="font-bold font-serif">H1</span>
+								</Button>
+							</Tooltip>
+							<Tooltip content="Heading 2" side="top" asChild>
+								<Button
+									variant={editor.isActive("heading", { level: 2 }) ? "secondary" : "ghost"}
+									shape="square"
+									size="sm"
+									onClick={() => handleFormat(() => editor.chain().focus().toggleHeading({ level: 2 }).run())}
+									aria-label="Heading 2"
+								>
+									<span className="font-bold font-serif text-sm">H2</span>
+								</Button>
+							</Tooltip>
+							<div className="mx-1 h-5 w-px bg-slate-300" />
+							<Tooltip content="Bold" side="top" asChild>
+								<Button
+									variant={editor.isActive("bold") ? "secondary" : "ghost"}
+									shape="square"
+									size="sm"
+									icon={<TextBIcon size={16} />}
+									onClick={() => handleFormat(() => editor.chain().focus().toggleBold().run())}
+									aria-label="Bold"
+								/>
+							</Tooltip>
+							<Tooltip content="Italic" side="top" asChild>
+								<Button
+									variant={editor.isActive("italic") ? "secondary" : "ghost"}
+									shape="square"
+									size="sm"
+									icon={<TextItalicIcon size={16} />}
+									onClick={() => handleFormat(() => editor.chain().focus().toggleItalic().run())}
+									aria-label="Italic"
+								/>
+							</Tooltip>
+							<Tooltip content="Underline" side="top" asChild>
+								<Button
+									variant={editor.isActive("underline") ? "secondary" : "ghost"}
+									shape="square"
+									size="sm"
+									icon={<TextUnderlineIcon size={16} />}
+									onClick={() => handleFormat(() => editor.chain().focus().toggleUnderline().run())}
+									aria-label="Underline"
+								/>
+							</Tooltip>
+							<Tooltip content="Strikethrough" side="top" asChild>
+								<Button
+									variant={editor.isActive("strike") ? "secondary" : "ghost"}
+									shape="square"
+									size="sm"
+									icon={<TextStrikethroughIcon size={16} />}
+									onClick={() => handleFormat(() => editor.chain().focus().toggleStrike().run())}
+									aria-label="Strikethrough"
+								/>
+							</Tooltip>
 
-					{/* Lists */}
-					<Tooltip content="Bullet list" side="top" asChild>
-						<Button
-							variant={editor.isActive("bulletList") ? "secondary" : "ghost"}
-							shape="square"
-							size="sm"
-							icon={<ListBulletsIcon size={16} />}
-							onClick={() => editor.chain().focus().toggleBulletList().run()}
-							aria-label="Bullet list"
-						/>
-					</Tooltip>
-					<Tooltip content="Numbered list" side="top" asChild>
-						<Button
-							variant={editor.isActive("orderedList") ? "secondary" : "ghost"}
-							shape="square"
-							size="sm"
-							icon={<ListNumbersIcon size={16} />}
-							onClick={() => editor.chain().focus().toggleOrderedList().run()}
-							aria-label="Numbered list"
-						/>
-					</Tooltip>
+							<div className="mx-1 h-5 w-px bg-slate-300" />
 
-					<div className="mx-1 h-5 w-px bg-slate-300" />
+							{/* Lists */}
+							<Tooltip content="Bullet list" side="top" asChild>
+								<Button
+									variant={editor.isActive("bulletList") ? "secondary" : "ghost"}
+									shape="square"
+									size="sm"
+									icon={<ListBulletsIcon size={16} />}
+									onClick={() => handleFormat(() => editor.chain().focus().toggleBulletList().run())}
+									aria-label="Bullet list"
+								/>
+							</Tooltip>
+							<Tooltip content="Numbered list" side="top" asChild>
+								<Button
+									variant={editor.isActive("orderedList") ? "secondary" : "ghost"}
+									shape="square"
+									size="sm"
+									icon={<ListNumbersIcon size={16} />}
+									onClick={() => handleFormat(() => editor.chain().focus().toggleOrderedList().run())}
+									aria-label="Numbered list"
+								/>
+							</Tooltip>
 
-					{/* Block formatting */}
-					<Tooltip content="Blockquote" side="top" asChild>
-						<Button
-							variant={editor.isActive("blockquote") ? "secondary" : "ghost"}
-							shape="square"
-							size="sm"
-							icon={<QuotesIcon size={16} />}
-							onClick={() => editor.chain().focus().toggleBlockquote().run()}
-							aria-label="Blockquote"
-						/>
-					</Tooltip>
-					<Tooltip content="Link" side="top" asChild>
-						<Button
-							variant={editor.isActive("link") ? "secondary" : "ghost"}
-							shape="square"
-							size="sm"
-							icon={<LinkSimpleIcon size={16} />}
-							onClick={setLink}
-							aria-label="Link"
-						/>
-					</Tooltip>
-					{editor.isActive("link") && (
-						<Tooltip content="Remove link" side="top" asChild>
-							<Button
-								variant="ghost"
-								shape="square"
-								size="sm"
-								icon={<LinkBreakIcon size={16} />}
-								onClick={() => editor.chain().focus().unsetLink().run()}
-								aria-label="Remove link"
-							/>
-						</Tooltip>
+							<div className="mx-1 h-5 w-px bg-slate-300" />
+
+							{/* Block formatting */}
+							<Tooltip content="Blockquote" side="top" asChild>
+								<Button
+									variant={editor.isActive("blockquote") ? "secondary" : "ghost"}
+									shape="square"
+									size="sm"
+									icon={<QuotesIcon size={16} />}
+									onClick={() => handleFormat(() => editor.chain().focus().toggleBlockquote().run())}
+									aria-label="Blockquote"
+								/>
+							</Tooltip>
+							<Tooltip content="Link" side="top" asChild>
+								<Button
+									variant={editor.isActive("link") ? "secondary" : "ghost"}
+									shape="square"
+									size="sm"
+									icon={<LinkSimpleIcon size={16} />}
+									onClick={() => handleFormat(setLink)}
+									aria-label="Link"
+								/>
+							</Tooltip>
+							{editor.isActive("link") && (
+								<Tooltip content="Remove link" side="top" asChild>
+									<Button
+										variant="ghost"
+										shape="square"
+										size="sm"
+										icon={<LinkBreakIcon size={16} />}
+										onClick={() => handleFormat(() => editor.chain().focus().unsetLink().run())}
+										aria-label="Remove link"
+									/>
+								</Tooltip>
+							)}
+							<Tooltip content="Horizontal rule" side="top" asChild>
+								<Button
+									variant="ghost"
+									shape="square"
+									size="sm"
+									icon={<MinusIcon size={16} />}
+									onClick={() => handleFormat(() => editor.chain().focus().setHorizontalRule().run())}
+									aria-label="Horizontal rule"
+								/>
+							</Tooltip>
+
+							<div className="mx-1 h-5 w-px bg-slate-300" />
+
+							{/* Undo/Redo */}
+							<Tooltip content="Undo" side="top" asChild>
+								<Button
+									variant="ghost"
+									shape="square"
+									size="sm"
+									icon={<ArrowCounterClockwiseIcon size={16} />}
+									onClick={() => handleFormat(() => editor.chain().focus().undo().run())}
+									disabled={!editor.can().undo()}
+									aria-label="Undo"
+								/>
+							</Tooltip>
+							<Tooltip content="Redo" side="top" asChild>
+								<Button
+									variant="ghost"
+									shape="square"
+									size="sm"
+									icon={<ArrowClockwiseIcon size={16} />}
+									onClick={() => handleFormat(() => editor.chain().focus().redo().run())}
+									disabled={!editor.can().redo()}
+									aria-label="Redo"
+								/>
+							</Tooltip>
+						</div>
 					)}
-					<Tooltip content="Horizontal rule" side="top" asChild>
-						<Button
-							variant="ghost"
-							shape="square"
-							size="sm"
-							icon={<MinusIcon size={16} />}
-							onClick={() => editor.chain().focus().setHorizontalRule().run()}
-							aria-label="Horizontal rule"
-						/>
-					</Tooltip>
-
-					<div className="mx-1 h-5 w-px bg-slate-300" />
-
-					{/* Undo/Redo */}
-					<Tooltip content="Undo" side="top" asChild>
-						<Button
-							variant="ghost"
-							shape="square"
-							size="sm"
-							icon={<ArrowCounterClockwiseIcon size={16} />}
-							onClick={() => editor.chain().focus().undo().run()}
-							disabled={!editor.can().undo()}
-							aria-label="Undo"
-						/>
-					</Tooltip>
-					<Tooltip content="Redo" side="top" asChild>
-						<Button
-							variant="ghost"
-							shape="square"
-							size="sm"
-							icon={<ArrowClockwiseIcon size={16} />}
-							onClick={() => editor.chain().focus().redo().run()}
-							disabled={!editor.can().redo()}
-							aria-label="Redo"
-						/>
-					</Tooltip>
 				</div>
 				
 				{footerActions && (
