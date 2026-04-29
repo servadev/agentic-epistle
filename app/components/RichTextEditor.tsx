@@ -32,12 +32,14 @@ interface RichTextEditorProps {
 	value: string;
 	onChange: (value: string) => void;
 	footerActions?: React.ReactNode;
+	leftFooterActions?: React.ReactNode;
 }
 
 export default function RichTextEditor({
 	value,
 	onChange,
 	footerActions,
+	leftFooterActions,
 }: RichTextEditorProps) {
 	const editor = useEditor({
 		extensions: [
@@ -297,6 +299,11 @@ export default function RichTextEditor({
 									aria-label="Redo"
 								/>
 							</Tooltip>
+						</div>
+					)}
+					{leftFooterActions && (
+						<div className="flex items-center ml-1">
+							{leftFooterActions}
 						</div>
 					)}
 				</div>
