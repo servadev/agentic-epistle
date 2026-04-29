@@ -16,6 +16,7 @@ import {
 	PaperPlaneTiltIcon,
 	PencilSimpleIcon,
 	StarIcon,
+	TagIcon,
 	TrashIcon,
 	XIcon,
 } from "@phosphor-icons/react";
@@ -37,6 +38,7 @@ interface EmailPanelToolbarProps {
 	onToggleStar: () => void;
 	onToggleRead: () => void;
 	onMove: (folderId: string) => void;
+	onTag: () => void;
 	onViewSource: () => void;
 	onDelete: () => void;
 }
@@ -56,21 +58,12 @@ export default function EmailPanelToolbar({
 	onToggleStar,
 	onToggleRead,
 	onMove,
+	onTag,
 	onViewSource,
 	onDelete,
 }: EmailPanelToolbarProps) {
 	return (
-		<div className="flex items-center gap-1 px-3 py-2 border-b border-kumo-line shrink-0 md:px-4 bg-kumo-background">
-			<Button
-				variant="ghost"
-				shape="square"
-				size="sm"
-				icon={<ArrowLeftIcon size={18} />}
-				onClick={onBack}
-				aria-label="Back to list"
-				className="md:hidden shrink-0"
-			/>
-
+		<div className="flex items-center gap-1 px-3 py-1 bg-kumo-background justify-end w-full">
 			{isDraftFolder ? (
 				<>
 					<Button
@@ -157,6 +150,17 @@ export default function EmailPanelToolbar({
 			</Tooltip>
 
 			<MoveToFolderMenu folders={moveToFolders} onMove={onMove} />
+
+			<Tooltip content="Tag" side="bottom" asChild>
+				<Button
+					variant="ghost"
+					shape="square"
+					size="sm"
+					icon={<TagIcon size={18} />}
+					onClick={onTag}
+					aria-label="Tag"
+				/>
+			</Tooltip>
 
 			<div className="ml-auto flex items-center gap-0.5">
 				<Tooltip content="View source" side="bottom" asChild>

@@ -12,6 +12,7 @@ import EmailPanelToolbar from "~/components/email-panel/EmailPanelToolbar";
 import SingleMessageView from "~/components/email-panel/SingleMessageView";
 import ThreadMessage from "~/components/email-panel/ThreadMessage";
 import SuggestedEventThreadItem from "~/components/email-panel/SuggestedEventThreadItem";
+import TagModal from "~/components/TagModal";
 import { splitEmailList, toEmailListValue } from "~/lib/utils";
 import api from "~/services/api";
 import { useDeleteEmail, useEmail, useMoveEmail, useReplyToEmail, useSendEmail, useThreadReplies, useUpdateEmail } from "~/queries/emails";
@@ -55,6 +56,7 @@ export default function EmailPanel({ emailId }: { emailId: string }) {
 
 	// Modals state
 	const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+	const [isTagModalOpen, setIsTagModalOpen] = useState(false);
 
 	const { data: contactsData } = useContacts(mailboxId);
 	const contacts = contactsData?.contacts || [];
@@ -190,41 +192,44 @@ export default function EmailPanel({ emailId }: { emailId: string }) {
 			<EmailPanelHeader
 				email={email}
 				avatarUrl={avatarUrl || undefined}
+				contactName={senderContact?.name || undefined}
 				onClose={closePanel}
-			/>
-
-			<EmailPanelToolbar
-				email={email}
-				mailboxId={mailboxId}
-				isDraftFolder={isDraftFolder}
-				isSending={isSending}
-				moveToFolders={moveToFolders}
-				onBack={closePanel}
-				onSendDraft={() => handleSendDraft()}
-				onEditDraft={() => handleEditDraft()}
-				onReply={() =>
-					startCompose({ mode: "reply", originalEmail: lastReceivedMessage })
+				toolbar={
+					<EmailPanelToolbar
+						email={email}
+						mailboxId={mailboxId}
+						isDraftFolder={isDraftFolder}
+						isSending={isSending}
+						moveToFolders={moveToFolders}
+						onBack={closePanel}
+						onSendDraft={() => handleSendDraft()}
+						onEditDraft={() => handleEditDraft()}
+						onReply={() =>
+							startCompose({ mode: "reply", originalEmail: lastReceivedMessage })
+						}
+						onReplyAll={() =>
+							startCompose({
+								mode: "reply-all",
+								originalEmail: lastReceivedMessage,
+							})
+						}
+						onForward={() => startCompose({ mode: "forward", originalEmail: email })}
+						onToggleStar={toggleStar}
+						onToggleRead={() => {
+							if (mailboxId) {
+								updateEmail.mutate({
+									mailboxId,
+									id: email.id,
+									data: { read: !email.read },
+								});
+							}
+						}}
+						onMove={handleMove}
+						onTag={() => setIsTagModalOpen(true)}
+						onViewSource={() => setSourceViewEmail(email)}
+						onDelete={handleDelete}
+					/>
 				}
-				onReplyAll={() =>
-					startCompose({
-						mode: "reply-all",
-						originalEmail: lastReceivedMessage,
-					})
-				}
-				onForward={() => startCompose({ mode: "forward", originalEmail: email })}
-				onToggleStar={toggleStar}
-				onToggleRead={() => {
-					if (mailboxId) {
-						updateEmail.mutate({
-							mailboxId,
-							id: email.id,
-							data: { read: !email.read },
-						});
-					}
-				}}
-				onMove={handleMove}
-				onViewSource={() => setSourceViewEmail(email)}
-				onDelete={handleDelete}
 			/>
 
 			<div className="flex-1 overflow-y-auto">
@@ -290,6 +295,15 @@ export default function EmailPanel({ emailId }: { emailId: string }) {
 				isDeleting={deleteEmailMut.isPending || moveEmailMut.isPending}
 				isTrashFolder={folder === Folders.TRASH}
 			/>
+
+			{mailboxId && (
+				<TagModal
+					email={email}
+					mailboxId={mailboxId}
+					isOpen={isTagModalOpen}
+					onClose={() => setIsTagModalOpen(false)}
+				/>
+			)}
 		</div>
 	);
 }
