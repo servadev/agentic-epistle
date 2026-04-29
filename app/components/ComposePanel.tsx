@@ -7,8 +7,9 @@ import { FloppyDiskIcon, PaperPlaneTiltIcon, XIcon } from "@phosphor-icons/react
 import { useParams } from "react-router";
 import { useComposeForm } from "~/hooks/useComposeForm";
 import RichTextEditor from "./RichTextEditor";
+import type { Email } from "~/types";
 
-export default function ComposePanel() {
+export default function ComposePanel({ defaultReplyEmail }: { defaultReplyEmail?: Email }) {
 	const { mailboxId, folder } = useParams<{
 		mailboxId: string;
 		folder: string;
@@ -30,154 +31,145 @@ export default function ComposePanel() {
 		error,
 		isSavingDraft,
 		isSending,
-		formTitle,
 		handleSaveDraft,
 		handleSend,
-		closeCompose,
 		closePanel,
-	} = useComposeForm(mailboxId, folder);
+	} = useComposeForm(mailboxId, folder, defaultReplyEmail);
+
+	// Safe to use mailboxId directly as the From address for now
+	const fromAddress = mailboxId || "";
 
 	return (
-		<div className="flex flex-col h-full bg-slate-50">
-			<div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 shrink-0 md:px-6 bg-white">
-				<h2 className="text-base font-bold text-slate-900">
-					{formTitle}
-				</h2>
-				<div className="flex items-center gap-1">
-					<Button
-						variant="ghost"
-						shape="square"
-						size="sm"
-						icon={<XIcon size={18} />}
-						onClick={closeCompose}
-						disabled={isSending}
-						aria-label="Close compose"
-					/>
-				</div>
-			</div>
-
+		<div className="flex flex-col w-full bg-white px-4 py-3 md:px-6">
 			<form
 				onSubmit={(e) => handleSend(e, closePanel)}
-				className="flex flex-col flex-1 min-h-0 overflow-y-auto"
+				className="flex flex-col gap-3"
 			>
-				<div className="p-4 md:p-6 space-y-4">
-					{error && <Banner variant="error" text={error} />}
+				{error && <Banner variant="error" text={error} />}
 
-					<div className="space-y-3">
-						<div className="flex items-center gap-2">
-							<label className="text-sm font-bold text-slate-500 uppercase tracking-wider w-14 shrink-0">
-								To
-							</label>
-							<div className="flex-1 flex items-center gap-2 min-w-0">
-								<Input
-									type="text"
-									placeholder="recipient@example.com"
-									size="sm"
-									value={to}
-									onChange={(e) => setTo(e.target.value)}
-									required
-								/>
-								{!showCcBcc && (
-									<button
-										type="button"
-										onClick={() => setShowCcBcc(true)}
-										className="shrink-0 text-xs text-slate-500 hover:text-slate-800 font-bold uppercase tracking-wider"
-									>
-										CC / BCC
-									</button>
-								)}
-							</div>
+				{/* Metadata fields (compact) */}
+				<div className="flex flex-col gap-2">
+					<div className="flex items-center gap-2">
+						<label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider w-12 shrink-0">
+							From
+						</label>
+						<div className="flex-1">
+							<Input
+								type="text"
+								size="sm"
+								value={fromAddress}
+								disabled
+								className="bg-slate-50 text-slate-500"
+							/>
 						</div>
+					</div>
 
-						{showCcBcc && (
-							<div className="flex items-center gap-2">
-								<label className="text-sm font-bold text-slate-500 uppercase tracking-wider w-14 shrink-0">
-									CC
-								</label>
-								<div className="flex-1">
-									<Input
-										type="text"
-										size="sm"
-										value={cc}
-										onChange={(e) => setCc(e.target.value)}
-										placeholder="Separate multiple addresses with commas"
-									/>
-								</div>
-							</div>
-						)}
+					<div className="flex items-center gap-2">
+						<label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider w-12 shrink-0">
+							To
+						</label>
+						<div className="flex-1 flex items-center gap-2 min-w-0">
+							<Input
+								type="text"
+								placeholder="recipient@example.com"
+								size="sm"
+								value={to}
+								onChange={(e) => setTo(e.target.value)}
+								required
+							/>
+							{!showCcBcc && (
+								<button
+									type="button"
+									onClick={() => setShowCcBcc(true)}
+									className="shrink-0 text-[10px] text-slate-500 hover:text-slate-800 font-bold uppercase tracking-wider"
+								>
+									CC/BCC
+								</button>
+							)}
+						</div>
+					</div>
 
-						{showCcBcc && (
-							<div className="flex items-center gap-2">
-								<label className="text-sm font-bold text-slate-500 uppercase tracking-wider w-14 shrink-0">
-									BCC
-								</label>
-								<div className="flex-1">
-									<Input
-										type="text"
-										size="sm"
-										value={bcc}
-										onChange={(e) => setBcc(e.target.value)}
-										placeholder="Separate multiple addresses with commas"
-									/>
-								</div>
-							</div>
-						)}
-
+					{showCcBcc && (
 						<div className="flex items-center gap-2">
-							<label className="text-sm font-bold text-slate-500 uppercase tracking-wider w-14 shrink-0">
-								Subject
+							<label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider w-12 shrink-0">
+								CC
 							</label>
 							<div className="flex-1">
 								<Input
 									type="text"
-									placeholder="Email subject"
 									size="sm"
-									value={subject}
-									onChange={(e) => setSubject(e.target.value)}
-									required
+									value={cc}
+									onChange={(e) => setCc(e.target.value)}
+									placeholder="Separate with commas"
 								/>
 							</div>
 						</div>
-					</div>
+					)}
 
-					<div className="border border-slate-200 rounded-md overflow-hidden bg-white shadow-sm">
-						<RichTextEditor
-							value={body}
-							onChange={setBody}
-						/>
+					{showCcBcc && (
+						<div className="flex items-center gap-2">
+							<label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider w-12 shrink-0">
+								BCC
+							</label>
+							<div className="flex-1">
+								<Input
+									type="text"
+									size="sm"
+									value={bcc}
+									onChange={(e) => setBcc(e.target.value)}
+									placeholder="Separate with commas"
+								/>
+							</div>
+						</div>
+					)}
+
+					<div className="flex items-center gap-2">
+						<label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider w-12 shrink-0">
+							Subj
+						</label>
+						<div className="flex-1">
+							<Input
+								type="text"
+								placeholder="Email subject"
+								size="sm"
+								value={subject}
+								onChange={(e) => setSubject(e.target.value)}
+								required
+							/>
+						</div>
 					</div>
 				</div>
 
-				{/* Footer actions */}
-				<div className="mt-auto px-4 py-3 border-t border-slate-200 bg-slate-50 shrink-0 md:px-6">
-					<div className="flex items-center justify-between">
-						<Button type="button" variant="ghost" size="sm" onClick={closeCompose} disabled={isSending}>
-							Discard
-						</Button>
-						<div className="flex items-center gap-2">
-							<Button
-								type="button"
-								variant="secondary"
-								size="sm"
-								loading={isSavingDraft}
-								disabled={isSending}
-								icon={<FloppyDiskIcon size={14} />}
-								onClick={handleSaveDraft}
-							>
-								{isSavingDraft ? "Saving..." : "Save as Draft"}
-							</Button>
-							<Button
-								type="submit"
-								variant="primary"
-								size="sm"
-								loading={isSending}
-								disabled={isSavingDraft || isSending}
-								icon={<PaperPlaneTiltIcon size={14} />}
-							>
-								{isSending ? "Sending..." : "Send"}
-							</Button>
-						</div>
-					</div>
+				{/* Editor & Actions */}
+				<div className="w-full relative">
+					<RichTextEditor
+						value={body}
+						onChange={setBody}
+						footerActions={
+							<div className="flex items-center gap-2">
+								<Button
+									type="button"
+									variant="ghost"
+									size="sm"
+									loading={isSavingDraft}
+									disabled={isSending}
+									icon={<FloppyDiskIcon size={14} />}
+									onClick={handleSaveDraft}
+									aria-label="Save Draft"
+								/>
+								<Button
+									type="submit"
+									variant="primary"
+									size="sm"
+									loading={isSending}
+									disabled={isSavingDraft || isSending}
+									icon={<PaperPlaneTiltIcon size={14} />}
+								>
+									{isSending ? "Sending..." : "Send"}
+								</Button>
+							</div>
+						}
+					/>
 				</div>
 			</form>
 		</div>

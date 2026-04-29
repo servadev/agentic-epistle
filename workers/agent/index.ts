@@ -492,6 +492,7 @@ export class EmailAgent extends AIChatAgent<any> {
 
 		let emailBody = "";
 		let threadContext = "";
+		let threadEmailIds: string[] = [emailData.emailId];
 		try {
 			const email = await getFullEmail(stub, emailData.emailId);
 			if (email?.body_text) {
@@ -531,6 +532,7 @@ export class EmailAgent extends AIChatAgent<any> {
 				threadContext = threadResult.messages
 					.map((e) => `[${e.date}] ${e.sender} → ${e.recipient} (${e.folder_id}): ${(e.body_text || "").substring(0, 500)}`)
 					.join("\n\n");
+				threadEmailIds = threadResult.messages.map((e) => e.id);
 			}
 
 			// Scan thread context for prompt injection too -- an attacker
@@ -592,11 +594,24 @@ This is the first message in the thread (no prior conversation).`;
 Based on the email content and thread context above:
 1. Draft a reply using draft_reply. If you need more context, use get_thread with thread ID "${emailData.threadId}".`;
 
+		let existingEventsForThread = false;
+		try {
+			const calendarNs = env.CALENDAR;
+			const calendarId = calendarNs.idFromName(emailData.mailboxId);
+			const calendarStub = calendarNs.get(calendarId) as any;
+			const threadEvents = await calendarStub.getEventsForEmailIds(threadEmailIds);
+			if (threadEvents && threadEvents.length > 0) {
+				existingEventsForThread = true;
+			}
+		} catch (e) {
+			console.warn("Failed to check existing calendar events for thread:", (e as Error).message);
+		}
+
 		const containsMeetingKeywords = MEETING_PATTERNS.some(pattern =>
 			pattern.test(emailData.subject) || pattern.test(emailBody)
 		);
 
-		if (containsMeetingKeywords) {
+		if (containsMeetingKeywords && !existingEventsForThread) {
 			autoPrompt += `
 2. IMPORTANT: The email seems to contain a meeting invitation or proposes a time to meet. YOU MUST ALSO call suggest_event to extract the meeting details. NEVER use create_event here, ONLY use suggest_event so the user can review it first.`;
 		}

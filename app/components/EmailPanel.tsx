@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router";
 import { Folders } from "shared/folders";
 import { formatMessageGroupDate } from "shared/dates";
+import ComposePanel from "~/components/ComposePanel";
 import EmailPanelDialogs from "~/components/email-panel/EmailPanelDialogs";
 import EmailPanelHeader from "~/components/email-panel/EmailPanelHeader";
 import EmailPanelToolbar from "~/components/email-panel/EmailPanelToolbar";
@@ -283,6 +284,10 @@ export default function EmailPanel({ emailId }: { emailId: string }) {
 						queryEmailId={threadSuggestedEventsEmailId}
 					/>
 				)}
+			</div>
+
+			<div className="shrink-0 border-t border-slate-200 bg-white z-20">
+				<ComposePanel defaultReplyEmail={lastReceivedMessage} />
 			</div>
 
 			<EmailPanelDialogs

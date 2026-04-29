@@ -1098,6 +1098,16 @@ export class CalendarDO extends DurableObject<Env> {
 		).all();
 	}
 
+	async getEventsForEmailIds(emailIds: string[]): Promise<EventData[]> {
+		if (!emailIds || emailIds.length === 0) return [];
+		
+		const sources = emailIds.flatMap(id => [`suggested:${id}`, `confirmed_suggested:${id}`]);
+		
+		return this.db.select().from(schema.events).where(
+			inArray(schema.events.source, sources)
+		).all();
+	}
+
 	async getAllEventsDebug(): Promise<EventData[]> {
 		return this.db.select().from(schema.events).all();
 	}
