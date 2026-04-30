@@ -25,8 +25,10 @@ export default function ComposeEmail() {
 		setCc,
 		bcc,
 		setBcc,
-		showCcBcc,
-		setShowCcBcc,
+		showCc,
+		setShowCc,
+		showBcc,
+		setShowBcc,
 		subject,
 		setSubject,
 		body,
@@ -65,34 +67,50 @@ export default function ComposeEmail() {
 								required
 							/>
 						</div>
-						{!showCcBcc && (
-							<button
-								type="button"
-								onClick={() => setShowCcBcc(true)}
-								className="shrink-0 text-xs text-slate-500 hover:text-slate-800 font-bold uppercase tracking-wider mt-5"
-							>
-								CC / BCC
-							</button>
+						{(!showCc || !showBcc) && (
+							<div className="mt-6 flex items-center gap-1 shrink-0">
+								{!showCc && (
+									<button
+										type="button"
+										onClick={() => setShowCc(true)}
+										className="text-[10px] text-slate-500 hover:text-slate-800 font-bold uppercase tracking-wider"
+									>
+										CC
+									</button>
+								)}
+								{!showCc && !showBcc && (
+									<span className="text-[10px] text-slate-400">/</span>
+								)}
+								{!showBcc && (
+									<button
+										type="button"
+										onClick={() => setShowBcc(true)}
+										className="text-[10px] text-slate-500 hover:text-slate-800 font-bold uppercase tracking-wider"
+									>
+										BCC
+									</button>
+								)}
+							</div>
 						)}
 					</div>
-					{showCcBcc && (
+					{showCc && (
 						<Input
-							label="CC"
+							label="Cc"
 							type="text"
+							placeholder="Separate with commas"
 							size="sm"
 							value={cc}
 							onChange={(e) => setCc(e.target.value)}
-							placeholder="Separate multiple addresses with commas"
 						/>
 					)}
-					{showCcBcc && (
+					{showBcc && (
 						<Input
-							label="BCC"
+							label="Bcc"
 							type="text"
+							placeholder="Separate with commas"
 							size="sm"
 							value={bcc}
 							onChange={(e) => setBcc(e.target.value)}
-							placeholder="Separate multiple addresses with commas"
 						/>
 					)}
 					<Input

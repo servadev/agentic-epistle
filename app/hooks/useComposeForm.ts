@@ -100,7 +100,8 @@ function buildReplyAllFields(
 	return {
 		to: toRecipients.join(", "),
 		cc: ccRecipients.join(", "),
-		showCcBcc: ccRecipients.length > 0,
+		showCc: ccRecipients.length > 0,
+		showBcc: false,
 	};
 }
 
@@ -175,7 +176,8 @@ export function useComposeForm(mailboxId?: string, _folder?: string, defaultRepl
 	const [to, setTo] = useState("");
 	const [cc, setCc] = useState("");
 	const [bcc, setBcc] = useState("");
-	const [showCcBcc, setShowCcBcc] = useState(false);
+	const [showCc, setShowCc] = useState(false);
+	const [showBcc, setShowBcc] = useState(false);
 	const [subject, setSubject] = useState("");
 	const [body, setBody] = useState("");
 	const [error, setError] = useState<string | null>(null);
