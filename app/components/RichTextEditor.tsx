@@ -25,7 +25,6 @@ import LinkExtension from "@tiptap/extension-link";
 import TextAlign from "@tiptap/extension-text-align";
 import { TextStyle } from "@tiptap/extension-text-style";
 import Underline from "@tiptap/extension-underline";
-import { Node, mergeAttributes } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -36,30 +35,6 @@ interface RichTextEditorProps {
 	footerActions?: React.ReactNode;
 	leftFooterActions?: React.ReactNode;
 }
-
-const Details = Node.create({
-	name: "details",
-	group: "block",
-	content: "summary block+",
-	parseHTML() {
-		return [{ tag: "details" }];
-	},
-	renderHTML({ HTMLAttributes }) {
-		return ["details", mergeAttributes(HTMLAttributes, { class: "gmail_quote", style: "margin-top: 10px;" }), 0];
-	},
-});
-
-const Summary = Node.create({
-	name: "summary",
-	group: "block",
-	content: "inline*",
-	parseHTML() {
-		return [{ tag: "summary" }];
-	},
-	renderHTML({ HTMLAttributes }) {
-		return ["summary", mergeAttributes(HTMLAttributes, { style: "display: inline-block; color: #64748b; font-weight: bold; cursor: pointer; user-select: none; list-style: none;" }), 0];
-	},
-});
 
 export default function RichTextEditor({
 	value,
@@ -77,8 +52,6 @@ export default function RichTextEditor({
 			TextStyle,
 			Color,
 			Highlight.configure({ multicolor: true }),
-			Details,
-			Summary,
 		],
 		content: value,
 		editorProps: {

@@ -16,20 +16,6 @@ export default function ComposePanel({ defaultReplyEmail }: { defaultReplyEmail?
 		folder: string;
 	}>();
 
-	const [showCcBccPopover, setShowCcBccPopover] = useState(false);
-	const popoverRef = useRef<HTMLDivElement>(null);
-
-	useEffect(() => {
-		if (!showCcBccPopover) return;
-		const handleClickOutside = (e: MouseEvent) => {
-			if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
-				setShowCcBccPopover(false);
-			}
-		};
-		document.addEventListener("mousedown", handleClickOutside);
-		return () => document.removeEventListener("mousedown", handleClickOutside);
-	}, [showCcBccPopover]);
-
 	const {
 		to,
 		setTo,
@@ -53,6 +39,20 @@ export default function ComposePanel({ defaultReplyEmail }: { defaultReplyEmail?
 		closePanel,
 		mode,
 	} = useComposeForm(mailboxId, folder, defaultReplyEmail);
+
+	const [showCcBccPopover, setShowCcBccPopover] = useState(false);
+	const ccBccPopoverRef = useRef<HTMLDivElement>(null);
+
+	useEffect(() => {
+		if (!showCcBccPopover) return;
+		const handleClickOutside = (e: MouseEvent) => {
+			if (ccBccPopoverRef.current && !ccBccPopoverRef.current.contains(e.target as Node)) {
+				setShowCcBccPopover(false);
+			}
+		};
+		document.addEventListener("mousedown", handleClickOutside);
+		return () => document.removeEventListener("mousedown", handleClickOutside);
+	}, [showCcBccPopover]);
 
 	// Safe to use mailboxId directly as the From address for now
 	const fromAddress = mailboxId || "";
@@ -147,11 +147,11 @@ export default function ComposePanel({ defaultReplyEmail }: { defaultReplyEmail?
 						value={body}
 						onChange={setBody}
 						leftFooterActions={
-							<div className="relative flex items-center" ref={popoverRef}>
+							<div className="relative" ref={ccBccPopoverRef}>
 								<Tooltip content="Toggle CC/BCC" side="top" asChild>
 									<Button
 										type="button"
-										variant={showCc || showBcc || showCcBccPopover ? "secondary" : "ghost"}
+										variant={showCc || showBcc ? "secondary" : "ghost"}
 										shape="square"
 										size="sm"
 										onClick={() => setShowCcBccPopover(!showCcBccPopover)}
@@ -170,25 +170,25 @@ export default function ComposePanel({ defaultReplyEmail }: { defaultReplyEmail?
 											type="button"
 											variant={showCc ? "secondary" : "ghost"}
 											size="sm"
-											className="w-full justify-start text-xs"
+											className="w-full justify-start"
 											onClick={() => {
 												setShowCc(!showCc);
 												setShowCcBccPopover(false);
 											}}
 										>
-											{showCc ? "Remove Cc" : "Add Cc"}
+											<span className="text-sm font-medium">CC</span>
 										</Button>
 										<Button
 											type="button"
 											variant={showBcc ? "secondary" : "ghost"}
 											size="sm"
-											className="w-full justify-start text-xs"
+											className="w-full justify-start"
 											onClick={() => {
 												setShowBcc(!showBcc);
 												setShowCcBccPopover(false);
 											}}
 										>
-											{showBcc ? "Remove Bcc" : "Add Bcc"}
+											<span className="text-sm font-medium">BCC</span>
 										</Button>
 									</div>
 								)}
