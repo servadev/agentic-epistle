@@ -170,7 +170,7 @@ export function buildQuotedReplyBlock(
 
 	return `<br>
 <details class="gmail_quote" style="margin-top: 10px; cursor: pointer;">
-	<summary style="display: inline-block; color: #94a3b8; font-weight: bold; cursor: pointer; user-select: none; list-style: none; letter-spacing: 2px;">•••</summary>
+	<summary style="display: inline-block; color: #64748b; font-weight: bold; cursor: pointer; user-select: none; list-style: none;">•••</summary>
 	<blockquote style="border-left: 2px solid #ccc; margin: 8px 0 0 0; padding-left: 1em; color: #666;">
 		On ${formattedDate}, ${escapedSender} wrote:<br><br>${bodyToQuote}
 	</blockquote>
@@ -184,21 +184,16 @@ export function buildQuotedReplyBlock(
 export function wrapQuotedBlocks(html: string): string {
 	if (!html) return html;
 
-	// Pattern 1: Standard <details class="gmail_quote"> (our own format or already wrapped)
-	// We skip this if it's already there to avoid double-wrapping, but we do want to catch 
-	// standard blockquotes and generic gmail_quotes
+	const summaryIcon = `<summary style="display: inline-block; color: #64748b; font-weight: bold; cursor: pointer; user-select: none; list-style: none;">•••</summary>`;
 
 	// First check if it's already wrapped by us (has our specific summary tag)
-	if (html.includes('•••</summary>') || html.includes('...</summary>')) {
+	if (html.includes(summaryIcon) || html.includes('<summary style="display: inline-block; padding: 4px 8px;')) {
 		return html;
 	}
 
 	// Create a wrapper function that returns our details block
-	const createWrapper = (match: string, pre: string, content: string, post: string) => {
-		return `${pre}<details class="gmail_quote" style="margin-top: 10px; cursor: pointer;">
-	<summary style="display: inline-block; color: #94a3b8; font-weight: bold; cursor: pointer; user-select: none; list-style: none; letter-spacing: 2px;">•••</summary>
-	${content}
-</details>${post}`;
+	const createWrapper = (content: string) => {
+		return `<details class="gmail_quote" style="margin-top: 10px; cursor: pointer;">\n\t${summaryIcon}\n\t${content}\n</details>`;
 	};
 
 	let processed = html;
@@ -208,43 +203,30 @@ export function wrapQuotedBlocks(html: string): string {
 		return html;
 	}
 
-	// Pattern 1: Gmail quotes (div class="gmail_quote")
-	// Using a regex to match the outer div and its contents. We use [\s\S]*? to be non-greedy
-	// but this might fail on nested gmail_quotes. However, for a simple wrap it usually suffices.
-	const gmailQuoteRegex = /(<div[^>]*class=["'][^>]*gmail_quote["'][^>]*>)([\s\S]*?)(<\/div>)/gi;
-	processed = processed.replace(gmailQuoteRegex, (match, p1, p2, p3) => {
-		// If it already contains a details/summary from a previous pass, don't wrap
+	// Pattern 1: Gmail quotes (div class="gmail_quote") + potential preceding "On ... wrote:" text
+	// We want to catch `<div ...>On ... wrote:</div><br><div class="gmail_quote">...</div>`
+	// Or standard `<div class="gmail_quote">...</div>`
+	const gmailQuoteWithPrefixRegex = /(<div[^>]*>On\s+[^<]+wrote:[\s\S]*?<\/div>\s*<br>\s*)?(<div[^>]*class=["'][^>]*gmail_quote["'][^>]*>)([\s\S]*?)(<\/div>)/gi;
+	processed = processed.replace(gmailQuoteWithPrefixRegex, (match, prefix, p1, p2, p3) => {
 		if (p2.includes('<summary')) return match;
-		return createWrapper(match, '', match, ''); // Wrap the whole div
+		return createWrapper(match); // Wrap the whole match including prefix
 	});
 
 	// Pattern 2: Outlook quotes (div id="appendonsend" or hr tabindex="-1" followed by blockquote/div)
-	// Outlook often uses a specific HR or div structure
 	const outlookRegex = /(<hr[^>]*tabindex=["']-1["'][^>]*>[\s\S]*|<div[^>]*id=["']appendonsend["'][^>]*>[\s\S]*|<div[^>]*style=["'][^>]*border-top:[^>]*["'][^>]*>[\s\S]*From:[\s\S]*)/i;
-	
 	const outlookMatch = processed.match(outlookRegex);
 	if (outlookMatch && outlookMatch.index !== undefined && !processed.includes('<summary')) {
 		const before = processed.substring(0, outlookMatch.index);
 		const quote = processed.substring(outlookMatch.index);
-		return `${before}<details class="gmail_quote" style="margin-top: 10px; cursor: pointer;">
-	<summary style="display: inline-block; padding: 4px 8px; background: #e2e8f0; border-radius: 4px; color: #475569; font-weight: bold; cursor: pointer; user-select: none;">...</summary>
-	${quote}
-</details>`;
+		return `${before}${createWrapper(quote)}`;
 	}
 
 	// Pattern 3: Standard blockquotes that look like replies (starts with "On [date], [user] wrote:")
-	// or blockquotes at the very end of the email
-	// We want to match the "On ... wrote:" text that immediately precedes the blockquote.
-	const introQuoteRegex = /(<div[^>]*>\s*)?(On\s+[\s\S]{1,200}?(?:wrote|sent):\s*(?:<br\s*\/?>)?\s*)(<\/div>\s*)?(<blockquote[^>]*>[\s\S]*?<\/blockquote>)/gi;
-	processed = processed.replace(introQuoteRegex, (match) => {
+	// Wait, the "On ... wrote:" is often BEFORE the blockquote. Let's capture that too.
+	const blockquoteRegex = /((?:<div[^>]*>|On\s+)<br>)?(On\s+[^<]+wrote:[\s\S]*?(?:<br>|<\/div>)\s*)?(<blockquote[^>]*>)([\s\S]*?)(<\/blockquote>)\s*$/i;
+	processed = processed.replace(blockquoteRegex, (match) => {
 		if (match.includes('<summary')) return match;
-		return createWrapper(match, '', match, '');
-	});
-
-	const trailingBlockquoteRegex = /(<blockquote[^>]*>[\s\S]*?<\/blockquote>)\s*$/i;
-	processed = processed.replace(trailingBlockquoteRegex, (match) => {
-		if (match.includes('<summary')) return match;
-		return createWrapper(match, '', match, '');
+		return createWrapper(match);
 	});
 
 	return processed;

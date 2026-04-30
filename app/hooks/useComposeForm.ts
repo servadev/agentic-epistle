@@ -38,7 +38,8 @@ interface ComposeFormFields {
 	to: string;
 	cc: string;
 	bcc: string;
-	showCcBcc: boolean;
+	showCc: boolean;
+	showBcc: boolean;
 	subject: string;
 	body: string;
 }
@@ -47,7 +48,8 @@ const EMPTY_FIELDS: ComposeFormFields = {
 	to: "",
 	cc: "",
 	bcc: "",
-	showCcBcc: false,
+	showCc: false,
+	showBcc: false,
 	subject: "",
 	body: "",
 };
@@ -117,7 +119,8 @@ function buildInitialComposeFields(
 			to: draft.recipient || "",
 			cc: draft.cc || "",
 			bcc: draft.bcc || "",
-			showCcBcc: Boolean(draft.cc || draft.bcc),
+			showCc: Boolean(draft.cc),
+			showBcc: Boolean(draft.bcc),
 			subject: draft.subject || "",
 			body: draft.body || "",
 		};
@@ -213,7 +216,8 @@ export function useComposeForm(mailboxId?: string, _folder?: string, defaultRepl
 		setTo(initialFields.to);
 		setCc(initialFields.cc);
 		setBcc(initialFields.bcc);
-		setShowCcBcc(initialFields.showCcBcc);
+		setShowCc(initialFields.showCc);
+		setShowBcc(initialFields.showBcc);
 		setSubject(initialFields.subject);
 		setBody(initialFields.body);
 	}, [effectiveComposeOptions, currentMailbox?.email, sigBlock]);
@@ -273,5 +277,30 @@ export function useComposeForm(mailboxId?: string, _folder?: string, defaultRepl
 		finally { setIsSending(false); }
 	};
 
-	return { to, setTo, cc, setCc, bcc, setBcc, showCc, setShowCc, showBcc, setShowBcc, subject, setSubject, body, setBody, error, setError, isSavingDraft, isSending, formTitle, handleSaveDraft, handleSend, closeCompose, closePanel, mode: effectiveComposeOptions.mode };
+	return {
+		to,
+		setTo,
+		cc,
+		setCc,
+		bcc,
+		setBcc,
+		showCc,
+		setShowCc,
+		showBcc,
+		setShowBcc,
+		subject,
+		setSubject,
+		body,
+		setBody,
+		error,
+		setError,
+		isSavingDraft,
+		isSending,
+		formTitle,
+		handleSaveDraft,
+		handleSend,
+		closeCompose,
+		closePanel,
+		mode: effectiveComposeOptions.mode,
+	};
 }

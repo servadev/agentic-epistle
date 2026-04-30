@@ -218,7 +218,7 @@ export function buildQuotedReplyBlock(original: {
 
 	return `<br>
 <details class="gmail_quote" style="margin-top: 10px; cursor: pointer;">
-	<summary style="display: inline-block; color: #94a3b8; font-weight: bold; cursor: pointer; user-select: none; list-style: none; letter-spacing: 2px;">•••</summary>
+	<summary style="display: inline-block; color: #64748b; font-weight: bold; cursor: pointer; user-select: none; list-style: none;">•••</summary>
 	<blockquote style="border-left: 2px solid #ccc; margin: 8px 0 0 0; padding-left: 1em; color: #666;">
 		On ${originalDate}, ${originalSender} wrote:<br><br>${bodyToQuote}
 	</blockquote>
