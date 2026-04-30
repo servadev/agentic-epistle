@@ -48,10 +48,15 @@ const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
 function Clock() {
 	const [time, setTime] = useState(new Date());
 
+	const [mounted, setMounted] = useState(false);
+
 	useEffect(() => {
+		setMounted(true);
 		const timer = setInterval(() => setTime(new Date()), 1000);
 		return () => clearInterval(timer);
 	}, []);
+
+	if (!mounted) return null;
 
 	const dayName = time.toLocaleDateString('en-US', { weekday: 'long' });
 	const dayNum = time.getDate();
