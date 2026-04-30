@@ -13,6 +13,7 @@ import EmailIframe from "~/components/EmailIframe";
 import {
 	formatShortDate,
 	rewriteInlineImages,
+	wrapQuotedBlocks,
 } from "~/lib/utils";
 import type { Email } from "~/types";
 
@@ -61,7 +62,7 @@ export default function ThreadMessage({
 					<div className="-mx-2 -mt-2">
 						<EmailIframe
 							body={rewriteInlineImages(
-								email.body || "",
+								wrapQuotedBlocks(email.body || ""),
 								mailboxId || "",
 								email.id,
 								email.attachments,

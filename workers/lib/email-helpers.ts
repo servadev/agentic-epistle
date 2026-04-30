@@ -216,7 +216,13 @@ export function buildQuotedReplyBlock(original: {
 	const plainBody = stripHtmlToText(original.body);
 	const bodyToQuote = escapeHtml(plainBody).replace(/\n/g, "<br>");
 
-	return `<br><blockquote style="border-left: 2px solid #ccc; margin: 0; padding-left: 1em; color: #666;">On ${originalDate}, ${originalSender} wrote:<br><br>${bodyToQuote}</blockquote>`;
+	return `<br>
+<details class="gmail_quote" style="margin-top: 10px; cursor: pointer;">
+	<summary style="display: inline-block; padding: 4px 8px; background: #e2e8f0; border-radius: 4px; color: #475569; font-weight: bold; cursor: pointer; user-select: none;">...</summary>
+	<blockquote style="border-left: 2px solid #ccc; margin: 8px 0 0 0; padding-left: 1em; color: #666;">
+		On ${originalDate}, ${originalSender} wrote:<br><br>${bodyToQuote}
+	</blockquote>
+</details>`;
 }
 
 // ── Tool Logic (getFullEmail / getFullThread) ──────────────────────

@@ -6,6 +6,7 @@ import { Button, Tooltip } from "@cloudflare/kumo";
 import {
 	ArrowClockwiseIcon,
 	ArrowCounterClockwiseIcon,
+	BookOpenTextIcon,
 	LinkBreakIcon,
 	LinkSimpleIcon,
 	ListBulletsIcon,
@@ -132,9 +133,8 @@ export default function RichTextEditor({
 							size="sm"
 							onClick={() => setShowFormatting(!showFormatting)}
 							aria-label="Formatting options"
-						>
-							<span className="font-bold font-serif tracking-tight text-[15px] leading-none">Aa</span>
-						</Button>
+							icon={<BookOpenTextIcon size={18} weight={showFormatting ? "fill" : "regular"} />}
+						/>
 					</Tooltip>
 
 					{showFormatting && (

@@ -3,7 +3,7 @@
 //     https://opensource.org/licenses/Apache-2.0
 
 import { useKumoToastManager } from "@cloudflare/kumo";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router";
 import { Folders } from "shared/folders";
 import { formatMessageGroupDate } from "shared/dates";
@@ -200,6 +200,15 @@ export default function EmailPanel({ emailId }: { emailId: string }) {
 
 	const hasThread = allMessages.length > 1;
 
+	const messagesEndRef = useRef<HTMLDivElement>(null);
+
+	// Scroll to bottom on initial open
+	useEffect(() => {
+		if (messagesEndRef.current) {
+			messagesEndRef.current.scrollIntoView();
+		}
+	}, [emailId]);
+
 	return (
 		<div className="flex flex-col h-full">
 			<EmailPanelHeader
@@ -284,6 +293,7 @@ export default function EmailPanel({ emailId }: { emailId: string }) {
 						queryEmailId={threadSuggestedEventsEmailId}
 					/>
 				)}
+				<div ref={messagesEndRef} />
 			</div>
 
 			<div className="shrink-0 border-t border-slate-200 bg-white z-20">

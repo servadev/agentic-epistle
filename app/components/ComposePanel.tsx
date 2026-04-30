@@ -3,7 +3,7 @@
 //     https://opensource.org/licenses/Apache-2.0
 
 import { Banner, Button, Input, Tooltip } from "@cloudflare/kumo";
-import { FloppyDiskIcon, PaperPlaneTiltIcon, XIcon } from "@phosphor-icons/react";
+import { EnvelopeSimpleIcon, FloppyDiskIcon, PaperPlaneTiltIcon, PlusIcon, XIcon } from "@phosphor-icons/react";
 import { useParams } from "react-router";
 import { useComposeForm } from "~/hooks/useComposeForm";
 import RichTextEditor from "./RichTextEditor";
@@ -134,9 +134,13 @@ export default function ComposePanel({ defaultReplyEmail }: { defaultReplyEmail?
 									size="sm"
 									onClick={() => setShowCcBcc(!showCcBcc)}
 									aria-label="Toggle CC/BCC"
-								>
-									<span className="font-bold font-serif tracking-tight text-[13px] leading-none">CC</span>
-								</Button>
+									icon={
+										<div className="relative">
+											<EnvelopeSimpleIcon size={18} weight={showCcBcc ? "fill" : "regular"} />
+											<PlusIcon size={10} weight="bold" className="absolute -bottom-1 -right-1 bg-white rounded-full text-slate-700" />
+										</div>
+									}
+								/>
 							</Tooltip>
 						}
 						footerActions={
