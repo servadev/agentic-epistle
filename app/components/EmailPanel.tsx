@@ -132,10 +132,8 @@ export default function EmailPanel({ emailId }: { emailId: string }) {
 
 	const moveToFolders = useMemo(() => { const cur = folder || email?.folder_id; return folders.filter((f) => f.id !== cur); }, [folders, folder, email?.folder_id]);
 
-	if (!email) return <EmailPanelSkeleton />;
-
-	const toggleStar = () => { if (mailboxId) updateEmail.mutate({ mailboxId, id: email.id, data: { starred: !email.starred } }); };
-	const handleMove = (folderId: string) => { if (mailboxId) { moveEmailMut.mutate({ mailboxId, id: email.id, folderId }); closePanel(); } };
+	const toggleStar = () => { if (mailboxId && email) updateEmail.mutate({ mailboxId, id: email.id, data: { starred: !email.starred } }); };
+	const handleMove = (folderId: string) => { if (mailboxId && email) { moveEmailMut.mutate({ mailboxId, id: email.id, folderId }); closePanel(); } };
 	const handleDelete = () => {
 		setIsDeleteConfirmOpen(true);
 	};
@@ -154,13 +152,14 @@ export default function EmailPanel({ emailId }: { emailId: string }) {
 
 	const handleEditDraft = (draftMsg?: Email) => {
 		const target = draftMsg || email;
+		if (!target) return;
 		if (target.in_reply_to) { startCompose({ mode: "reply", originalEmail: allMessages.find((msg) => msg.id === target.in_reply_to), draftEmail: target }); }
 		else { startCompose({ mode: "new", originalEmail: undefined, draftEmail: target }); }
 	};
 
 	const handleDeleteDraft = async (draftMsg?: Email) => {
 		const target = draftMsg || email;
-		if (!mailboxId) return;
+		if (!mailboxId || !target) return;
 		if (!window.confirm("Discard this draft?")) return;
 		deleteEmailMut.mutate({ mailboxId, id: target.id });
 		toastManager.add({ title: "Draft discarded" });
@@ -169,7 +168,7 @@ export default function EmailPanel({ emailId }: { emailId: string }) {
 
 	const handleSendDraft = async (draftMsg?: Email) => {
 		let target = draftMsg || email;
-		if (!mailboxId || !currentMailbox) return;
+		if (!mailboxId || !currentMailbox || !target) return;
 		setIsSending(true);
 		try {
 			if (!target.recipient || !target.subject) { try { const fresh = await api.getEmail(mailboxId, target.id) as Email; if (fresh) target = fresh; } catch {} }
@@ -207,7 +206,9 @@ export default function EmailPanel({ emailId }: { emailId: string }) {
 		if (messagesEndRef.current) {
 			messagesEndRef.current.scrollIntoView();
 		}
-	}, [emailId]);
+	}, [allMessages.length, emailId]);
+
+	if (!email) return <EmailPanelSkeleton />;
 
 	return (
 		<div className="flex flex-col h-full">
