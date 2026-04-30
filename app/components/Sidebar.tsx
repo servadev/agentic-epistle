@@ -14,14 +14,16 @@ import {
 	TrashIcon,
 	TrayIcon,
 	UsersIcon,
+	TagIcon,
 } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
-import { NavLink, useLocation, useNavigate, useParams } from "react-router";
+import { NavLink, useLocation, useNavigate, useParams, useSearchParams } from "react-router";
 import { createPortal } from "react-dom";
 import { Folders, SYSTEM_FOLDER_IDS } from "shared/folders";
 import { useCreateFolder, useFolders } from "~/queries/folders";
-import { useMailbox } from "~/queries/mailboxes";
+import { useMailbox, useUpdateMailbox } from "~/queries/mailboxes";
 import { useUIStore } from "~/hooks/useUIStore";
+import CreateTagModal from "./CreateTagModal";
 
 const FOLDER_ICONS: Record<string, React.ReactNode> = {
 	[Folders.INBOX]: <TrayIcon size={18} weight="regular" />,
@@ -88,11 +90,16 @@ export default function Sidebar() {
 	const createFolderMutation = useCreateFolder();
 	const { startCompose, openComposeModal, closeSidebar, isSidebarOpen, openSidebar } = useUIStore();
 	const { data: currentMailbox } = useMailbox(mailboxId);
+	const updateMailbox = useUpdateMailbox();
 	const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
+	const [isCreateTagOpen, setIsCreateTagOpen] = useState(false);
 	const [newFolderName, setNewFolderName] = useState("");
 	const location = useLocation();
+	const [searchParams] = useSearchParams();
 
 	const isCollapsed = !isSidebarOpen;
+
+	const tags = currentMailbox?.settings?.tags || [];
 
 	const customFolders = useMemo(
 		() =>
@@ -263,6 +270,53 @@ export default function Sidebar() {
 						</div>
 					</div>
 				)}
+
+				{/* Tags */}
+				<div className="pt-5 pb-6">
+					<div className={`flex items-center justify-between mb-1.5 ${isCollapsed ? "px-0 md:px-0 lg:px-3 justify-center lg:justify-between" : "px-3"}`}>
+						<span className={`text-xs uppercase tracking-wider font-bold text-slate-500 ${isCollapsed ? "hidden lg:block" : ""}`}>
+							Tags
+						</span>
+						<Tooltip content="New tag" asChild>
+							<Button
+								variant="ghost"
+								shape="square"
+								size="sm"
+								icon={<PlusIcon size={16} />}
+								onClick={() => setIsCreateTagOpen(true)}
+								aria-label="Create new tag"
+								className={isCollapsed ? "mx-auto lg:mx-0" : ""}
+							/>
+						</Tooltip>
+					</div>
+					{tags.length > 0 && (
+						<div className="space-y-0.5">
+							{tags.map((tag) => {
+								// Construct link to Inbox with tag query param
+								const to = `/mailbox/${mailboxId}/emails/${Folders.INBOX}?tag=${encodeURIComponent(tag.id)}`;
+								const isActive = searchParams.get("tag") === tag.id;
+								return (
+									<NavLink
+										key={tag.id}
+										to={to}
+										onClick={handleNavClick}
+										title={isCollapsed ? tag.name : undefined}
+										className={`relative flex items-center ${isCollapsed ? "justify-center px-0 py-3 md:py-3 lg:py-2 lg:px-3 lg:justify-start lg:gap-3" : "gap-3 py-2 px-3"} rounded-lg text-sm font-medium transition-colors ${
+											isActive
+												? "bg-slate-200 text-slate-900 shadow-sm"
+												: "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+										}`}
+									>
+										<span className="shrink-0 flex items-center justify-center">
+											<div className={`w-3 h-3 rounded-full ${tag.color}`} />
+										</span>
+										<span className={`truncate flex-1 ${isCollapsed ? "hidden lg:block" : "block"}`}>{tag.name}</span>
+									</NavLink>
+								);
+							})}
+						</div>
+					)}
+				</div>
 			</nav>
 
 			{/* Create folder dialog */}
@@ -301,6 +355,12 @@ export default function Sidebar() {
 				</div>,
 				document.body
 			)}
+
+			<CreateTagModal
+				mailboxId={mailboxId || ""}
+				isOpen={isCreateTagOpen}
+				onClose={() => setIsCreateTagOpen(false)}
+			/>
 		</aside>
 	);
 }

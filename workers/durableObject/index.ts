@@ -583,6 +583,26 @@ export class MailboxDO extends DurableObject<Env> {
 		return this.getEmail(id);
 	}
 
+	async removeTagFromAllEmails(tagId: string) {
+		const emailsWithTag = this.db
+			.select({ id: schema.emails.id, tags: schema.emails.tags })
+			.from(schema.emails)
+			.where(sql`json_extract(${schema.emails.tags}, '$') LIKE ${'%' + tagId + '%'}`)
+			.all();
+
+		for (const email of emailsWithTag) {
+			if (!email.tags || !Array.isArray(email.tags)) continue;
+			const newTags = email.tags.filter((t: any) => t.id !== tagId);
+			if (newTags.length !== email.tags.length) {
+				this.db.update(schema.emails)
+					.set({ tags: newTags })
+					.where(eq(schema.emails.id, email.id))
+					.run();
+			}
+		}
+		return true;
+	}
+
 	async markThreadRead(threadId: string) {
 		this.ctx.storage.sql.exec(
 			`UPDATE emails SET read = 1 WHERE thread_id = ? AND read = 0`,

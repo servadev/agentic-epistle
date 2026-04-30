@@ -132,8 +132,26 @@ app.put("/api/v1/mailboxes/:mailboxId", async (c) => {
 	const mailboxId = c.req.param("mailboxId")!;
 	const { settings } = (await c.req.json()) as { settings: Record<string, unknown> };
 	const key = `mailboxes/${mailboxId}.json`;
-	if (!(await c.env.BUCKET.head(key))) return c.json({ error: "Not found" }, 404);
+	
+	const existingObj = await c.env.BUCKET.get(key);
+	if (!existingObj) return c.json({ error: "Not found" }, 404);
+	
+	const existingSettings = await existingObj.json() as Record<string, unknown>;
+	
+	// Detect deleted tags
+	const oldTags = (existingSettings.tags as any[]) || [];
+	const newTags = (settings.tags as any[]) || [];
+	const deletedTags = oldTags.filter(ot => !newTags.find(nt => nt.id === ot.id));
+	
 	await c.env.BUCKET.put(key, JSON.stringify(settings));
+	
+	if (deletedTags.length > 0) {
+		const stub = c.var.mailboxStub;
+		for (const dt of deletedTags) {
+			await stub.removeTagFromAllEmails(dt.id);
+		}
+	}
+	
 	return c.json({ id: mailboxId, name: mailboxId, email: mailboxId, settings });
 });
 
